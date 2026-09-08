@@ -1,0 +1,4 @@
+key	score	enabled	comment
+a	10.5	true	ok
+b	20.25	false	ok
+c		true	ok

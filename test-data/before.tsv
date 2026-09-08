@@ -1,0 +1,4 @@
+key	score	enabled
+a	10	true
+b	20	false
+c		true

@@ -1,0 +1,3 @@
+{"id":1,"name":"Alice","active":true,"profile":{"email":"a@example.com","age":"30","country":"JP"},"tags":[1,2],"items":[{"sku":"A1","qty":2,"price":100.5}],"score":1.5,"note":"set"}
+{"id":2,"name":"Bob","active":false,"profile":{"email":"b@example.com","age":"40"},"tags":[3],"items":[{"sku":"B1","qty":1,"price":20}],"score":2.0,"note":"set"}
+{"id":3,"name":"Cara","active":true,"profile":{"email":"c@example.com","country":"US"},"tags":[],"items":[{"sku":"C1","qty":1}],"score":3.25,"note":"set"}

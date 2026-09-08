@@ -1,0 +1,2 @@
+﻿{"id":1,"name":"Alice","active":true,"profile":{"email":"a@example.com","age":30},"tags":["a","b"],"items":[{"sku":"A1","qty":2}],"score":1.5,"note":null}
+{"id":2,"name":"Bob","active":false,"profile":{"email":"b@example.com"},"tags":[],"items":[{"sku":"B1","qty":1},{"sku":"B2","qty":3}],"score":2,"optional":"x"}

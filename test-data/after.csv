@@ -1,0 +1,4 @@
+﻿id,name,active,amount,created_at,country
+1,Alice,true,10.5,2026-01-01T12:30:00Z,JP
+5000000000,Bob,false,20,2026-01-02T08:00:00Z,US
+3,,true,30.25,2026-01-03T09:15:00Z,JP

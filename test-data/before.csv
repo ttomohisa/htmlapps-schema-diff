@@ -1,0 +1,5 @@
+﻿id,name,active,amount,created_at,notes
+1,Alice,true,10.5,2026-01-01,"hello, world"
+2,Bob,false,20,2026-01-02,"line1
+line2"
+3,,true,30.25,2026-01-03,"quote ""inside"""

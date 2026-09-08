@@ -1,0 +1,2 @@
+{"profile":{"email":"a@example.com","age":"30","country":"JP"},"tags":[1,2],"active":true,"score":1.5}
+{"profile":{"email":"b@example.com","age":"40","country":"US"},"tags":[3],"active":false,"score":2.25}

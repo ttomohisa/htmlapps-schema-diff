@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Schema comparison icon">
+  <rect width="64" height="64" rx="16" fill="#16624F"/>
+  <rect x="9" y="13" width="17" height="38" rx="3" fill="none" stroke="#fff" stroke-width="3.5"/>
+  <path d="M14 22h7M14 32h7M14 42h7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+  <rect x="38" y="13" width="17" height="38" rx="3" fill="none" stroke="#fff" stroke-width="3.5"/>
+  <path d="M43 22h7M43 32h7M43 42h7" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M28 25h8m0 0-3-3m3 3-3 3M36 39h-8m0 0 3-3m-3 3 3 3" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

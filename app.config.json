@@ -1,0 +1,26 @@
+{
+  "$schema": "./schemas/app-config.schema.json",
+  "name": "Schema Diff",
+  "nameJa": "Schema Diff",
+  "slug": "schema-diff",
+  "version": "1.0.0",
+  "description": "Compare Parquet, CSV, TSV, JSONL, and NDJSON schemas locally across formats, with compatibility guidance, first-10-row previews, search, filters, and Markdown / JSON reports.",
+  "descriptionJa": "Parquet / CSV / TSV / JSONL / NDJSONのスキーマを完全ローカルで横断比較します。互換性の目安、先頭10行プレビュー、検索・フィルター、Markdown / JSONレポートに対応します。",
+  "defaultLanguage": "auto",
+  "repository": {
+    "owner": "ttomohisa",
+    "name": "htmlapps-schema-diff"
+  },
+  "build": {
+    "output": "dist/index.html",
+    "blockRuntimeNetwork": true,
+    "selfExtract": {
+      "enabled": true,
+      "output": "dist/index.self-extract.html"
+    },
+    "sizeBudget": {
+      "readableWarningMb": 3,
+      "selfExtractWarningMb": 2
+    }
+  }
+}

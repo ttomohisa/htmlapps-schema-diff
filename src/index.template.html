@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f5f5f2">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'none'; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Schema Diff</title>
+  <link rel="icon" type="image/svg+xml" href="__APP_ICON_DATA_URI__">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f5f2;
+      --surface: #ffffff;
+      --surface-muted: #f0f0ed;
+      --surface-hover: #e9e9e5;
+      --text: #20211f;
+      --muted: #666963;
+      --line: #dadbd6;
+      --line-strong: #bfc1ba;
+      --accent: #16624f;
+      --accent-hover: #0e503f;
+      --accent-soft: #e1f0ea;
+      --danger: #b3261e;
+      --focus: #4d8bc7;
+      --shadow-sm: 0 1px 2px rgba(25, 28, 24, .08), 0 1px 6px rgba(25, 28, 24, .04);
+      --shadow-md: 0 12px 34px rgba(25, 28, 24, .10);
+      --radius: 12px;
+      --header-height: 66px;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, textarea, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--focus) 55%, transparent);
+      outline-offset: 2px;
+    }
+    .app-header {
+      position: sticky;
+      z-index: 30;
+      top: 0;
+      min-height: var(--header-height);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      backdrop-filter: blur(16px) saturate(1.2);
+    }
+    .header-inner {
+      width: min(1180px, 100%);
+      min-height: var(--header-height);
+      margin: 0 auto;
+      padding: 10px clamp(14px, 2.8vw, 30px);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-mark {
+      display: block;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 11px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .brand-mark img { width: 100%; height: 100%; display: block; }
+    .brand-copy { min-width: 0; }
+    .brand-name {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: .01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 7px;
+      padding: 1px 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--surface-muted);
+      font-size: 10px;
+      font-weight: 650;
+      vertical-align: 2px;
+    }
+    .brand-meta {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .button {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .button:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .button:active { transform: translateY(1px); }
+    .language-button {
+      min-width: 0;
+      padding: 5px 1px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .02em;
+      cursor: pointer;
+      transition: color .16s ease, opacity .16s ease;
+    }
+    .language-button:hover { color: var(--text); }
+    .language-button:active { opacity: .65; }
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .icon-button:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .icon-button:active { transform: translateY(1px); }
+    .icon-button svg { width: 18px; height: 18px; display: block; }
+    .header-icon-button {
+      width: auto;
+      height: auto;
+      padding: 5px 1px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      transition: color .16s ease, opacity .16s ease;
+    }
+    .header-icon-button:hover { border-color: transparent; background: transparent; color: var(--text); }
+    .header-icon-button:active { transform: none; opacity: .65; }
+    .header-icon-button svg { width: 20px; height: 20px; }
+    .main {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 22px clamp(14px, 2.8vw, 30px) 54px;
+    }
+    .page-intro {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 2px 18px;
+    }
+    .page-intro h2 {
+      margin: 0;
+      font-size: clamp(21px, 3vw, 26px);
+      line-height: 1.3;
+      letter-spacing: -.025em;
+    }
+    .page-intro p { margin: 5px 0 0; max-width: 760px; color: var(--muted); font-size: 13px; }
+    .local-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      flex: 0 0 auto;
+      margin-top: 3px;
+      padding: 7px 10px;
+      border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+      border-radius: 999px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .local-badge svg { width: 15px; height: 15px; display: block; }
+    .workspace {
+      margin: 0 0 28px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .workspace-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 15px; }
+    .workspace h2, .section-title { margin: 0; letter-spacing: -.02em; }
+    .workspace h2 { font-size: 19px; }
+    .workspace-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .stats { display: flex; flex-wrap: wrap; gap: 7px; }
+    .stat { min-width: 70px; padding: 7px 10px; border-radius: 10px; background: var(--surface-muted); text-align: center; }
+    .stat-value { display: block; font-size: 15px; font-weight: 780; line-height: 1.2; }
+    .stat-label { color: var(--muted); font-size: 10px; }
+    textarea {
+      width: 100%;
+      min-height: 260px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      background: #fbfbf9;
+      color: var(--text);
+      line-height: 1.7;
+    }
+    textarea:hover { border-color: var(--line-strong); }
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 12px; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .button { min-height: 40px; padding: 8px 14px; font-weight: 700; }
+    .button.primary { border-color: var(--accent); color: white; background: var(--accent); }
+    .button.primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+    .button.danger { color: var(--danger); }
+    .save-status { align-self: center; color: var(--muted); font-size: 12px; }
+    .export-row { display: flex; align-items: end; gap: 10px; margin-top: 12px; }
+    .export-field { display: grid; gap: 5px; min-width: min(100%, 320px); }
+    .export-label { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .filename-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+    .filename-control:focus-within { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 20%, transparent); }
+    .filename-input { width: 100%; min-width: 0; min-height: 40px; padding: 8px 10px; border: 0; outline: 0; background: transparent; color: var(--text); }
+    .filename-extension { padding: 0 10px; color: var(--muted); font-size: 12px; user-select: none; }
+    .section { padding: 26px 0; }
+    details { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow-sm); }
+    summary { cursor: pointer; padding: 14px 16px; font-weight: 720; }
+    .build-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 16px 16px; }
+    .build-item { padding: 11px; border-radius: 10px; background: var(--surface-muted); }
+    .build-item span { display: block; color: var(--muted); font-size: 10px; }
+    .build-item strong { display: block; overflow-wrap: anywhere; font-size: 12px; }
+    footer { width: min(1180px, 100%); margin: 0 auto; padding: 0 clamp(14px, 2.8vw, 30px) 34px; color: var(--muted); font-size: 12px; }
+    /* Reusable toast / Undo component. Canonical source: components/toast.html */
+    .app-toast {
+      position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 60;
+      display: flex; align-items: center; gap: 12px; max-width: min(420px, calc(100vw - 36px));
+      padding: 10px 12px 10px 14px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); opacity: 0;
+      transform: translateY(12px); pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    }
+    .app-toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .app-toast[data-tone="success"] { border-color: color-mix(in srgb, var(--accent) 34%, var(--line)); }
+    .app-toast[data-tone="warning"] { border-color: #c58a24; }
+    .app-toast-message { min-width: 0; flex: 1 1 auto; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+    .app-toast-action { flex: 0 0 auto; min-height: 34px; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--accent); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+    .app-toast-action:hover { background: var(--surface-hover); }
+    .app-toast-action[hidden] { display: none; }
+    dialog {
+      width: min(640px, calc(100% - 28px));
+      max-height: min(760px, calc(100dvh - 28px));
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow-md);
+    }
+    dialog::backdrop { background: rgba(15, 17, 14, .52); backdrop-filter: blur(4px); }
+    #helpDialog[open] {
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 0 0 auto;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .dialog-header h2 { margin: 0; font-size: 17px; }
+    .dialog-body {
+      min-height: 0;
+      flex: 1 1 auto;
+      padding: 20px 20px calc(28px + env(safe-area-inset-bottom));
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .dialog-body h3 {
+      margin: 25px 0 8px;
+      padding-top: 19px;
+      border-top: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+      font-size: 14px;
+    }
+    .dialog-body h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+    .dialog-body p, .dialog-body li { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .dialog-body p { margin: 8px 0 0; }
+    .dialog-body ul, .dialog-body ol { margin: 8px 0 0; padding-left: 22px; }
+    .dialog-body li + li { margin-top: 7px; }
+    .dialog-note {
+      margin-top: 12px;
+      padding: 11px 12px;
+      border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--text) !important;
+    }
+
+    /* Reusable confirmation component. Canonical source: components/confirm-dialog.html */
+    .app-confirm-dialog { width: min(420px, calc(100% - 24px)); max-width: 100%; }
+    .app-confirm-dialog::backdrop { background: rgba(15, 17, 14, .48); backdrop-filter: blur(3px); }
+    .app-confirm-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 18px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+    .app-confirm-title { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+    .app-confirm-close {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .app-confirm-close:hover { background: var(--surface-hover); }
+    .app-confirm-close svg { width: 19px; height: 19px; }
+    .app-confirm-body { padding: 18px; }
+    .app-confirm-message {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+    .app-confirm-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .app-confirm-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 760;
+      cursor: pointer;
+    }
+    .app-confirm-button:hover { border-color: var(--line-strong); background: var(--surface-hover); }
+    .app-confirm-button.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .app-confirm-button.primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+    .app-confirm-button.danger { border-color: var(--danger); background: var(--danger); color: #fff; }
+    .app-confirm-button:focus-visible, .app-confirm-close:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--focus) 55%, transparent);
+      outline-offset: 2px;
+    }
+
+    code { padding: 1px 5px; border-radius: 5px; background: var(--surface-muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @media (max-width: 820px) {
+      .page-intro { align-items: stretch; flex-direction: column; gap: 10px; }
+      .local-badge { align-self: flex-start; }
+      .workspace-head { align-items: stretch; flex-direction: column; }
+      .build-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      :root { --header-height: 58px; }
+      .header-inner { padding-block: 8px; }
+      .brand-mark { width: 34px; height: 34px; border-radius: 10px; }
+      .brand-name { font-size: 15px; }
+      .brand-meta { display: none; }
+      .header-actions { gap: 11px; }
+      .language-button { padding-block: 6px; }
+      .header-icon-button { padding-block: 6px; }
+      .main { padding-top: 18px; }
+      .page-intro { padding-bottom: 14px; }
+      .workspace { padding: 14px; border-radius: 14px; }
+      .stats { width: 100%; }
+      .stat { flex: 1 1 0; min-width: 0; }
+      .toolbar, .button-row { width: 100%; }
+      .button-row .button { flex: 1 1 auto; }
+      .export-row, .export-field { width: 100%; }
+      .app-toast { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); max-width: none; }
+      textarea { min-height: 235px; }
+      #helpDialog {
+        width: calc(100% - 20px);
+        max-height: calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      }
+      #helpDialog .dialog-body {
+        padding: 18px 18px calc(24px + env(safe-area-inset-bottom));
+      }
+      .app-confirm-dialog {
+        width: 100%;
+        max-width: none;
+        margin: auto 0 0;
+        border-width: 1px 0 0;
+        border-radius: 22px 22px 0 0;
+      }
+      .app-confirm-dialog::backdrop { background: rgba(0, 0, 0, .42); backdrop-filter: blur(2px); }
+      .app-confirm-header { padding: 14px 18px 12px; }
+      .app-confirm-body { padding: 12px 18px calc(env(safe-area-inset-bottom) + 18px); }
+      .app-confirm-message { font-size: 14px; line-height: 1.75; }
+      .app-confirm-actions { grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+      .app-confirm-button { min-height: 48px; font-size: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .loading-spinner { animation: none !important; }
+    }
+  
+
+    .page-intro h1 { margin: 0; font-size: clamp(21px, 3vw, 26px); line-height: 1.3; letter-spacing: -.025em; }
+    /* Schema Diff app-specific styles. Base tokens and components above come from htmlapps-template. */
+    .file-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    .file-panel { min-width: 0; }
+    .file-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .file-heading h3 { margin: 0; font-size: 14px; letter-spacing: -.01em; }
+    .side-label { color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+    .dropzone {
+      min-height: 170px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 12px;
+      background: #fbfbf9;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease;
+    }
+    .dropzone:hover { border-color: var(--accent); }
+    .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+    .dropzone.ready { border-style: solid; background: var(--surface); }
+    .dropzone.error { border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); background: #fff8f7; }
+    .drop-icon { width: 34px; height: 34px; color: var(--accent); }
+    .drop-title { font-size: 13px; font-weight: 760; overflow-wrap: anywhere; }
+    .drop-hint { color: var(--muted); font-size: 11px; }
+    .choose-button { margin-top: 2px; min-height: 38px; padding: 7px 12px; font-size: 12px; }
+    .file-input { display: none; }
+    .file-card { width: 100%; text-align: left; }
+    .file-name { margin-bottom: 5px; overflow: hidden; font-size: 13px; font-weight: 780; text-overflow: ellipsis; white-space: nowrap; }
+    .file-meta { display: flex; flex-wrap: wrap; gap: 4px 11px; color: var(--muted); font-size: 11px; }
+    .status-line { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--muted); font-size: 11px; }
+    .status-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--line-strong); }
+    .status-line.ready .status-dot { background: var(--accent); }
+    .status-line.error { color: var(--danger); }
+    .status-line.error .status-dot { background: var(--danger); }
+    .swap-wrap { display: grid; place-items: center; padding-top: 24px; }
+    .swap-button {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 10px;
+      color: var(--accent);
+    }
+    .swap-button svg { width: 18px; height: 18px; }
+    .swap-button:disabled { opacity: .42; cursor: not-allowed; }
+    .inference-settings { margin-top: 14px; border-radius: 12px; box-shadow: none; }
+    .inference-settings summary { padding: 11px 13px; color: var(--muted); font-size: 12px; }
+    .inference-settings-body { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(210px, 1fr); gap: 12px; padding: 0 13px 13px; }
+    .setting-control { display: grid; gap: 5px; min-width: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .setting-control select { min-width: 0; min-height: 38px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); }
+    .setting-note { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .format-badge { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .03em; }
+    .format-badge.inferred { background: #f7edcf; color: #76520b; }
+    .compare-note { margin: 10px 0 0; color: #76520b; font-size: 11px; text-align: right; }
+    .compare-row { display: flex; justify-content: flex-end; margin-top: 14px; }
+    .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+    .primary-button svg { width: 17px; height: 17px; }
+    .primary-button:disabled { opacity: .46; cursor: not-allowed; }
+    .compare-row { align-items: center; justify-content: space-between; gap: 14px; }
+    .compare-readiness { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .compare-readiness::before { content: ""; width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--line-strong); }
+    .compare-readiness.ready { color: var(--accent); font-weight: 700; }
+    .compare-readiness.ready::before { background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
+    .compare-readiness.error { color: var(--danger); }
+    .compare-readiness.error::before { background: var(--danger); }
+    .dropzone.ready { min-height: 126px; align-items: stretch; justify-content: flex-start; cursor: default; }
+    .file-card-head { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+    .file-schema-icon { width: 30px; height: 30px; flex: 0 0 auto; padding: 5px; border-radius: 9px; color: var(--accent); background: var(--accent-soft); }
+    .file-card-copy { min-width: 0; flex: 1 1 auto; }
+    .file-name { display: -webkit-box; margin-bottom: 4px; overflow: hidden; overflow-wrap: anywhere; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+    .file-card .choose-button { margin-top: 0; }
+    .file-card-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+    .file-card-actions .button { min-height: 38px; padding: 7px 10px; font-size: 11px; }
+    .preview-toggle { color: var(--accent); }
+    .file-preview { width: 100%; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+    .file-preview[hidden] { display: none; }
+    .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+    .preview-title { font-size: 11px; font-weight: 780; }
+    .preview-meta { color: var(--muted); font-size: 9px; white-space: nowrap; }
+    .preview-status { display: flex; align-items: center; gap: 7px; min-height: 34px; color: var(--muted); font-size: 10px; }
+    .preview-status.error { color: var(--danger); }
+    .preview-error-detail { margin: -1px 0 8px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
+    .preview-scroll { max-width: 100%; max-height: 282px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+    .preview-table { width: max-content; min-width: 100%; border-collapse: collapse; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; }
+    .preview-table th, .preview-table td { max-width: 220px; min-width: 90px; padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent); border-right: 1px solid color-mix(in srgb, var(--line) 54%, transparent); overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+    .preview-table th { position: sticky; top: 0; z-index: 2; background: #fbfbf9; color: var(--muted); font-weight: 760; }
+    .preview-table th:first-child, .preview-table td:first-child { position: sticky; left: 0; z-index: 1; min-width: 42px; width: 42px; background: #fbfbf9; color: var(--muted); text-align: right; }
+    .preview-table th:first-child { z-index: 3; }
+    .preview-table tr:last-child td { border-bottom: 0; }
+    .preview-null { color: var(--muted); font-style: italic; }
+    .preview-empty { padding: 13px; color: var(--muted); font-size: 10px; text-align: center; }
+    .loading-spinner { animation: schema-spin .8s linear infinite; transform-origin: 50% 50%; }
+    @keyframes schema-spin { to { transform: rotate(360deg); } }
+    .report-toolbar { position: sticky; top: var(--header-height); z-index: 12; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); background: color-mix(in srgb, var(--surface) 96%, transparent); backdrop-filter: blur(12px); }
+    .mobile-compare-bar { display: none; }
+
+    .results { padding: 0; overflow: hidden; }
+    .results-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 18px 20px 14px; }
+    .results-head h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+    .results-sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .report-toolbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 20px 14px;
+    }
+    .report-toolbar[hidden] { display: none; }
+    .report-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; min-width: 0; }
+    .report-field { display: grid; gap: 4px; min-width: 0; }
+    .report-field.search { width: min(330px, 46vw); }
+    .report-label { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .report-input, .report-select {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+    }
+    .report-input { width: 100%; min-width: 0; padding: 7px 10px; }
+    .report-select { padding: 7px 30px 7px 9px; }
+    .report-input::placeholder { color: #969991; }
+    .report-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+    .report-actions .button { min-height: 38px; padding: 7px 10px; font-size: 11px; }
+    .visible-count { color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .filter-empty { padding: 28px 20px 34px; border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent); text-align: center; }
+    .filter-empty strong { display: block; margin-bottom: 3px; font-size: 13px; }
+    .filter-empty span { color: var(--muted); font-size: 11px; }
+    .summary { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 20px 14px; }
+    .summary-card { min-width: 82px; padding: 7px 11px; border-radius: 10px; background: var(--surface-muted); }
+    .summary-value { display: block; font-size: 15px; font-weight: 780; line-height: 1.2; }
+    .summary-label { color: var(--muted); font-size: 10px; }
+    .empty-state { padding: 38px 20px 42px; border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent); text-align: center; }
+    .empty-state svg { width: 42px; height: 42px; margin-bottom: 7px; color: var(--line-strong); }
+    .empty-state h3 { margin: 0 0 4px; font-size: 14px; }
+    .empty-state p { margin: 0; color: var(--muted); font-size: 12px; }
+    .table-wrap { overflow-x: auto; border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent); }
+    .diff-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .diff-table th, .diff-table td { padding: 10px 14px; border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent); text-align: left; vertical-align: middle; }
+    .diff-table th { color: var(--muted); background: #fbfbf9; font-size: 10px; font-weight: 750; }
+    .diff-table tr:last-child td { border-bottom: 0; }
+    .field-cell, .type-cell { overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .field-cell { font-weight: 700; }
+    .field-path { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+    .field-path::before { content: ""; width: calc(var(--depth, 0) * 12px); flex: 0 0 auto; }
+    .field-path.nested .field-path-text::before { content: "↳ "; color: var(--line-strong); }
+    .field-path-text { min-width: 0; overflow-wrap: anywhere; }
+    .type-cell { color: #3f423e; }
+    .schema-type-main { display: block; font-weight: 650; }
+    .schema-meta { display: flex; flex-wrap: wrap; gap: 3px 7px; margin-top: 3px; color: var(--muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 9px; line-height: 1.35; }
+    .schema-meta span { white-space: nowrap; }
+    .change-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .missing { color: #989b95; }
+    .change-pill { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 999px; font-size: 10px; font-weight: 760; white-space: nowrap; }
+    .change-added { color: var(--accent); background: var(--accent-soft); }
+    .change-removed { color: var(--danger); background: #faeae8; }
+    .change-type { color: #76520b; background: #f7edcf; }
+    .change-nullability { color: #6f4c11; background: #f6ead3; }
+    .change-decimal { color: #684194; background: #f1eafb; }
+    .change-structure { color: #315b87; background: #e8f0f8; }
+    .change-fieldid { color: #545861; background: #eceef1; }
+    .change-renamed { color: #315b87; background: #e8f0f8; }
+    .change-same { color: var(--muted); background: var(--surface-muted); }
+    .impact-summary { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 20px 14px; }
+    .impact-card { min-width: 118px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+    .impact-value { display: block; font-size: 15px; font-weight: 780; line-height: 1.2; }
+    .impact-label { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; }
+    .impact-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid transparent; border-radius: 999px; font-size: 10px; font-weight: 780; line-height: 1.2; white-space: nowrap; }
+    .impact-badge::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
+    .impact-breaking { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 24%, var(--line)); background: #fff4f2; }
+    .impact-review { color: #76520b; border-color: #e0c98e; background: #fff9e9; }
+    .impact-compatible { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); background: var(--accent-soft); }
+    .impact-info { color: #545861; border-color: var(--line); background: var(--surface-muted); }
+    .impact-none { color: var(--muted); border-color: var(--line); background: var(--surface-muted); }
+    .impact-detail { display: grid; gap: 5px; margin-top: 6px; }
+    .impact-reason { color: var(--muted); font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
+    .mobile-diffs { display: none; }
+    .mobile-diff { padding: 13px 14px; border-top: 1px solid color-mix(in srgb, var(--line) 62%, transparent); }
+    .mobile-diff-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .mobile-field, .mobile-type-value { overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .mobile-field { min-width: 0; font-size: 11px; font-weight: 760; }
+    .mobile-types { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); gap: 6px; align-items: center; }
+    .mobile-type-box { min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: #fbfbf9; }
+    .mobile-type-label { display: block; margin-bottom: 2px; color: var(--muted); font-size: 9px; }
+    .mobile-type-value { display: block; font-size: 10px; }
+    .mobile-type-box .schema-meta { margin-top: 4px; font-size: 9px; }
+    .arrow { color: var(--muted); text-align: center; }
+
+    .build-section { padding-top: 18px; }
+    .build-section .build-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+
+    @media (max-width: 820px) {
+      .file-grid { grid-template-columns: 1fr; }
+      .compare-row { align-items: stretch; flex-direction: column; }
+      .compare-readiness { justify-content: center; text-align: center; }
+      .dropzone.ready { min-height: 118px; }
+      .mobile-compare-bar {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: flex; align-items: center; gap: 10px;
+        padding: 10px max(14px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+        border-top: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+        background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(16px) saturate(1.15);
+        box-shadow: 0 -8px 26px rgba(25, 28, 24, .08);
+      }
+      .mobile-compare-bar[hidden] { display: none; }
+      .mobile-compare-bar .button { width: 100%; min-height: 48px; font-size: 14px; }
+      body.mobile-action-visible { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+      body.mobile-action-visible .app-toast { bottom: calc(82px + env(safe-area-inset-bottom)); }
+      body.mobile-action-visible .compare-row .primary-button { display: none; }
+      .swap-wrap { padding-top: 0; min-height: 38px; }
+      .swap-button { transform: rotate(90deg); }
+      .inference-settings-body { grid-template-columns: 1fr; }
+      .setting-note { grid-column: auto; }
+      .compare-row { justify-content: stretch; }
+      .primary-button { width: 100%; }
+      .build-section .build-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .report-toolbar { position: static; padding-top: 0; border-top: 0; backdrop-filter: none; }
+      .table-wrap { display: none; }
+      .mobile-diffs { display: block; }
+      .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 14px; }
+      .summary-card { min-width: 0; }
+      .impact-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 14px; }
+      .impact-card { min-width: 0; }
+      .results-head { padding-inline: 14px; }
+      .report-toolbar { padding-inline: 14px; align-items: stretch; flex-direction: column; }
+      .report-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .55fr); }
+      .report-field.search { width: auto; }
+      .report-actions { justify-content: flex-start; }
+    }
+    @media (max-width: 520px) {
+      .file-heading h3 { font-size: 13px; }
+      .dropzone { min-height: 150px; padding: 14px; }
+      .compare-row { margin-top: 12px; }
+      .results { padding: 0; }
+      .report-controls { grid-template-columns: 1fr; }
+      .report-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .report-actions .button { width: 100%; min-height: 44px; padding-inline: 6px; }
+      .file-card-actions { display: grid; grid-template-columns: 1fr; }
+      .file-card-actions .button { width: 100%; min-height: 44px; }
+      .preview-scroll { max-height: 248px; }
+      .preview-table th, .preview-table td { max-width: 170px; min-width: 78px; }
+      .choose-button, .swap-button { min-height: 44px; }
+      .visible-count { grid-column: 1 / -1; }
+    }
+
+  </style>
+</head>
+<body>
+  <header class="app-header"><div class="header-inner">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><img id="appBrandIcon" src="__APP_ICON_DATA_URI__" alt=""></div><div class="brand-copy"><p class="brand-name"><span id="brandName">Schema Diff</span><span class="version-badge" id="versionBadge">v1.0.0</span></p><p class="brand-meta" data-i18n="brandMeta">Parquet / CSV / TSV / JSONL schema comparison · Fully local</p></div></div>
+    <div class="header-actions"><button class="language-button" id="languageButton" type="button" aria-label="Switch language">EN</button><button class="icon-button header-icon-button" id="helpButton" type="button" data-i18n-title="helpTitle" data-i18n-aria-label="helpTitle" title="使い方と注意事項" aria-label="使い方と注意事項"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.35 2.35 0 1 1 3.72 1.9c-.92.67-1.52 1.12-1.52 2.1"/><path d="M12 17h.01"/></svg></button></div>
+  </div></header>
+  <!-- APP:BEGIN Schema Diff application -->
+  <main class="main">
+    <section class="page-intro" aria-labelledby="heroTitle">
+      <div><h1 id="heroTitle" data-i18n="introTitle">2つのデータファイルのスキーマ差分を比較</h1><p data-i18n="lead">Parquetの明示スキーマとCSV / TSV / JSONL / NDJSONの推定スキーマを、ファイルを送信せずブラウザーだけで比較します。</p></div>
+      <div class="local-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-5"/></svg><span data-i18n="localBadge">完全ローカル処理</span></div>
+    </section>
+
+    <section class="workspace" aria-labelledby="workspaceTitle">
+      <div class="workspace-head"><div><h2 id="workspaceTitle" data-i18n="workspaceTitle">比較するファイル</h2><p data-i18n="workspaceBody">BeforeとAfterにParquet / CSV / TSV / JSONL / NDJSONファイルを追加します。</p></div></div>
+      <div class="file-grid">
+        <div class="file-panel">
+          <div class="file-heading"><h3 data-i18n="before">Before</h3><span class="side-label" data-i18n="oldSchema">OLD</span></div>
+          <div class="dropzone" id="beforeDrop" data-side="before" role="button" tabindex="0" aria-describedby="beforeStatus"><input class="file-input" id="beforeInput" type="file" accept=".parquet,.csv,.tsv,.tab,.jsonl,.ndjson"><div id="beforeContent"></div></div>
+          <div class="status-line" id="beforeStatus" aria-live="polite"><span class="status-dot"></span><span data-i18n="waitingFile">ファイルを選択してください</span></div>
+        </div>
+        <div class="swap-wrap"><button class="button swap-button" id="swapButton" type="button" disabled data-i18n-title="swap" data-i18n-aria-label="swap" title="Before / Afterを入れ替える" aria-label="Before / Afterを入れ替える"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3"/></svg></button></div>
+        <div class="file-panel">
+          <div class="file-heading"><h3 data-i18n="after">After</h3><span class="side-label" data-i18n="newSchema">NEW</span></div>
+          <div class="dropzone" id="afterDrop" data-side="after" role="button" tabindex="0" aria-describedby="afterStatus"><input class="file-input" id="afterInput" type="file" accept=".parquet,.csv,.tsv,.tab,.jsonl,.ndjson"><div id="afterContent"></div></div>
+          <div class="status-line" id="afterStatus" aria-live="polite"><span class="status-dot"></span><span data-i18n="waitingFile">ファイルを選択してください</span></div>
+        </div>
+      </div>
+      <details class="inference-settings">
+        <summary data-i18n="inferenceSettings">推定スキーマ設定</summary>
+        <div class="inference-settings-body">
+          <label class="setting-control"><span data-i18n="sampleRowsLabel">推定に使う行数</span><select id="sampleRowsSelect"><option value="20000" data-i18n="sample20k">20,000行</option><option value="100000" data-i18n="sample100k">100,000行</option><option value="all" data-i18n="sampleAll">全件</option></select></label>
+          <label class="setting-control"><span data-i18n="headerModeLabel">ヘッダー</span><select id="headerModeSelect"><option value="auto" data-i18n="headerAuto">自動判定</option><option value="yes" data-i18n="headerYes">先頭行をヘッダーとして使用</option><option value="no" data-i18n="headerNo">ヘッダーなし</option></select></label>
+          <p class="setting-note" data-i18n="inferenceSettingsNote">CSV / TSV / JSONL / NDJSONはデータから型を推定します。行数設定はすべてに適用され、ヘッダー設定はCSV / TSVだけに適用されます。</p>
+        </div>
+      </details>
+      <div class="compare-row"><div class="compare-readiness" id="compareReadiness" aria-live="polite"><span data-i18n="compareNeedBoth">BeforeとAfterを追加してください</span></div><button class="button primary primary-button" id="compareButton" type="button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7h11l-3-3m3 3-3 3M16 17H5l3 3m-3-3 3-3"/></svg><span data-i18n="compare">スキーマを比較</span></button></div>
+    </section>
+
+    <section class="workspace results" aria-labelledby="resultsTitle">
+      <div class="results-head"><div><h2 id="resultsTitle" data-i18n="resultsTitle">比較結果</h2><p class="results-sub" id="resultsSub" data-i18n="resultsWaiting">対応している2つのファイルを選択すると、形式をまたいで比較できます。</p></div></div>
+      <div class="report-toolbar" id="reportToolbar" hidden>
+        <div class="report-controls">
+          <label class="report-field search"><span class="report-label" data-i18n="fieldSearchLabel">Field path検索</span><input class="report-input" id="fieldSearch" type="search" autocomplete="off" data-i18n-placeholder="fieldSearchPlaceholder" placeholder="field pathを検索"></label>
+          <label class="report-field"><span class="report-label" data-i18n="filterLabel">表示フィルター</span><select class="report-select" id="diffFilter"><option value="all" data-i18n="filterAll">すべて</option><option value="changed" data-i18n="filterChanged">変更のみ</option><option value="added" data-i18n="filterAdded">追加</option><option value="removed" data-i18n="filterRemoved">削除</option><option value="type" data-i18n="filterType">型変更</option><option value="breaking" data-i18n="filterBreaking">破壊的変更の可能性</option><option value="review" data-i18n="filterReview">要確認</option></select></label>
+        </div>
+        <div class="report-actions">
+          <span class="visible-count" id="visibleCount" aria-live="polite"></span>
+          <button class="button" id="copyResultButton" type="button" data-i18n="copyResult">結果をコピー</button>
+          <button class="button" id="saveMarkdownButton" type="button" data-i18n="saveMarkdown">Markdown保存</button>
+          <button class="button" id="saveJsonButton" type="button" data-i18n="saveJson">JSON保存</button>
+        </div>
+      </div>
+      <div id="resultsBody"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l4 4v14H8z"/><path d="M16 3v5h5M4 7v14h4M11 12h6M11 16h6"/></svg><h3 data-i18n="emptyTitle">まだ比較していません</h3><p data-i18n="emptyBody">BeforeとAfterにParquet / CSV / TSV / JSONL / NDJSONファイルを追加してください。</p></div></div>
+    </section>
+
+    <section class="section build-section">
+      <details><summary data-i18n="buildInfo">ビルド情報</summary><div class="build-grid"><div class="build-item"><span data-i18n="appVersion">アプリ版</span><strong id="buildVersion">—</strong></div><div class="build-item"><span data-i18n="builtAt">ビルド日時</span><strong id="builtAt">—</strong></div><div class="build-item"><span data-i18n="parquetEngine">Parquet解析</span><strong>hyparquet 1.30.0 compact subset</strong></div><div class="build-item"><span data-i18n="csvEngine">CSV / TSV解析</span><strong>Built-in RFC 4180 stream parser</strong></div><div class="build-item"><span data-i18n="jsonlEngine">JSONL / NDJSON解析</span><strong>Built-in streaming JSON parser</strong></div><div class="build-item"><span data-i18n="runtimeNetwork">実行時通信</span><strong data-i18n="none">なし</strong></div></div></details>
+    </section>
+  </main>
+  <!-- APP:END -->
+  <div class="mobile-compare-bar" id="mobileCompareBar" hidden><button class="button primary primary-button" id="mobileCompareButton" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7h11l-3-3m3 3-3 3M16 17H5l3 3m-3-3 3-3"/></svg><span data-i18n="compare">スキーマを比較</span></button></div>
+  <footer><span id="footerName">Schema Diff</span> · MIT License · <span data-i18n="footer">Files stay on this device</span></footer>
+  <div class="app-toast" id="appToast" role="status" aria-live="polite" aria-atomic="true" data-tone="default"><span class="app-toast-message" id="appToastMessage"></span></div>
+  <dialog id="helpDialog" aria-labelledby="helpTitle"><div class="dialog-header"><h2 id="helpTitle" data-i18n="helpTitle">使い方と注意事項</h2><button class="icon-button" id="closeHelpButton" type="button" data-i18n-title="close" data-i18n-aria-label="close" title="閉じる" aria-label="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div><div class="dialog-body"><!-- APP:HELP:BEGIN Schema Diff help --><h3 data-i18n="helpBasicsTitle">基本操作</h3><ol><li data-i18n="helpStep1">Beforeに比較元のParquet / CSV / TSV / JSONL / NDJSONを追加します。</li><li data-i18n="helpStep2">Afterに比較先のファイルを追加します。</li><li data-i18n="helpStep3">推定形式は必要に応じて行数設定を調整し、「スキーマを比較」で変更を確認します。</li></ol><h3 data-i18n="helpPrivacyTitle">プライバシー</h3><p data-i18n="helpPrivacyBody">ファイルはブラウザー内だけで処理し、外部サーバーへ送信しません。Parquetのスキーマは末尾のメタデータ領域から読み、先頭10行プレビューを開いた場合だけ必要な行データを追加で読みます。CSV / TSV / JSONL / NDJSONも必要な範囲だけを読みます。</p><h3 data-i18n="helpNotesTitle">注意事項</h3><ul><li data-i18n="helpNote1">CSV / TSV / JSONL / NDJSONの型やNULL情報はデータからの推定です。明示的な制約ではありません。</li><li data-i18n="helpNote2">Parquet / CSV / TSV / JSONL / NDJSONは形式をまたいで比較できます。形式固有の型表現は共通型へ正規化して判定します。</li><li data-i18n="helpNote3">壊れたファイルや推定範囲外にだけ存在する値は正しく判定できない場合があります。</li><li data-i18n="helpNote4">検索とフィルターは画面表示だけに適用されます。コピー、Markdown、JSONには比較結果全体を出力します。</li></ul><p class="dialog-note" data-i18n="helpOffline">単一HTMLとしてローカルで直接開いて利用できます。</p><!-- APP:HELP:END --></div></dialog>
+
+  <script>
+  (()=>{'use strict';
+    const APP_CONFIG=__APP_CONFIG_JSON__;
+    const BUILD_MANIFEST=__BUILD_MANIFEST_JSON__;
+    const assetBundle=__EMBEDDED_ASSET_BUNDLE_JSON__;
+    const blobUrls=new Set(),assetByteCache=new Map();
+    function decodeBase64Bytes(base64){const binary=atob(base64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes}
+    async function gunzip(bytes){if(typeof DecompressionStream!=='function')throw new Error('DecompressionStream is not supported');const response=new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')));return new Uint8Array(await response.arrayBuffer())}
+    function assetEntry(dependencyId,assetKey){const dep=assetBundle.dependencies?.[dependencyId];const asset=dep?.assets?.[assetKey];if(!asset)throw new Error(`Embedded asset not found: ${dependencyId}/${assetKey}`);return asset}
+    window.StandaloneAssets=Object.freeze({
+      list(){return Object.entries(assetBundle.dependencies||{}).flatMap(([dependencyId,dep])=>Object.keys(dep.assets||{}).map(assetKey=>({dependencyId,assetKey})))},
+      has(dependencyId,assetKey){return !!assetBundle.dependencies?.[dependencyId]?.assets?.[assetKey]},
+      bytes(dependencyId,assetKey){const asset=assetEntry(dependencyId,assetKey);if(asset.compression==='gzip')throw new Error(`Embedded asset ${dependencyId}/${assetKey} is gzip-compressed; use await StandaloneAssets.bytesAsync().`);return decodeBase64Bytes(asset.data)},
+      async bytesAsync(dependencyId,assetKey){const key=`${dependencyId}/${assetKey}`;if(assetByteCache.has(key))return assetByteCache.get(key);const asset=assetEntry(dependencyId,assetKey);let bytes=decodeBase64Bytes(asset.data);if(asset.compression==='gzip')bytes=await gunzip(bytes);assetByteCache.set(key,bytes);return bytes},
+      async blobUrlAsync(dependencyId,assetKey){const asset=assetEntry(dependencyId,assetKey);const url=URL.createObjectURL(new Blob([await this.bytesAsync(dependencyId,assetKey)],{type:asset.mime||'application/octet-stream'}));blobUrls.add(url);return url}
+    });
+    addEventListener('pagehide',()=>{for(const url of blobUrls)URL.revokeObjectURL(url);blobUrls.clear()});
+    // Template export filename helper is implemented below: outputFilename.
+
+    const translations={ja:{
+      brandMeta:'Parquet / CSV / TSV / JSONL スキーマ比較 · 完全ローカル',
+      introTitle:'2つのデータファイルのスキーマ差分を比較',
+      lead:'Parquetの明示スキーマとCSV / TSV / JSONL / NDJSONの推定スキーマを、ファイルを送信せずブラウザーだけで比較します。',localBadge:'完全ローカル処理',workspaceTitle:'比較するファイル',workspaceBody:'BeforeとAfterにParquet / CSV / TSV / JSONL / NDJSONファイルを追加します。',before:'Before',after:'After',oldSchema:'OLD',newSchema:'NEW',waitingFile:'ファイルを選択してください',chooseFile:'ファイルを選択',dropTitle:'Parquet / CSV / TSV / JSONL / NDJSONを追加',dropHint:'ここにドロップ、またはファイルを選択',loading:'スキーマを読み込み中…',ready:'スキーマを読み込みました',invalid:'ファイルを読み込めませんでした',unsupported:'対応していない形式です',swap:'Before / Afterを入れ替える',compare:'スキーマを比較',replaceFile:'ファイルを変更',previewRows:'先頭10行をプレビュー',hidePreview:'プレビューを閉じる',previewLoading:'先頭10行を読み込み中…',previewTitle:'先頭10行',previewEmpty:'データ行はありません',previewEmptyParquet:'このParquetにはデータ行がありません（スキーマのみ）',previewError:'プレビューを表示できませんでした',previewRetry:'もう一度試す',previewReadBytes:'プレビュー読込 {size}',previewRow:'行',previewLazyNote:'プレビューを開いたときだけ行データを読み込みます。',previewUnsupportedCodec:'このParquetの圧縮形式はこのプレビューでは読み込めません',compareNeedBoth:'BeforeとAfterを追加してください',compareNeedBefore:'Beforeを追加してください',compareNeedAfter:'Afterを追加してください',compareLoading:'スキーマを読み込み中です',compareReady:'2つのスキーマを比較できます',compareFixError:'読み込みエラーのファイルを変更してください',resultsTitle:'比較結果',resultsWaiting:'対応している2つのファイルを選択すると、形式をまたいで比較できます。',formatMismatch:'Parquet / CSV / TSV / JSONL / NDJSONを形式をまたいで比較できます。',emptyTitle:'まだ比較していません',emptyBody:'BeforeとAfterにParquet / CSV / TSV / JSONL / NDJSONファイルを追加してください。',emptyNeedBeforeTitle:'Beforeを追加してください',emptyNeedBeforeBody:'比較元のファイルをBeforeに追加すると比較できます。',emptyNeedAfterTitle:'Afterを追加してください',emptyNeedAfterBody:'比較先のファイルをAfterに追加すると比較できます。',emptyLoadingTitle:'スキーマを読み込んでいます',emptyLoadingBody:'読み込みが完了すると比較できるようになります。',emptyErrorTitle:'ファイルを確認してください',emptyErrorBody:'読み込めなかったファイルを変更してください。',emptyReadyTitle:'比較の準備ができました',emptyReadyBody:'「スキーマを比較」を押すと差分を確認できます。',sameTitle:'スキーマに差分はありません',sameBody:'比較対象のスキーマ情報は一致しています。',changedCount:'{count}フィールドに変更',summaryAll:'フィールド',summaryAdded:'追加',summaryRemoved:'削除',summaryModified:'変更',field:'Field path',change:'変更',added:'追加',removed:'削除',typeChanged:'型',nullabilityChanged:'NULL可否',decimalChanged:'Decimal',structureChanged:'構造',fieldIdChanged:'Field ID',renamed:'名前変更',unchanged:'変更なし',missing:'—',rows:'{count}行',sampledRows:'{count}行を推定',fields:'{count}フィールド',readBytes:'読込 {size}',metadataReadBytes:'metadata読込 {size}',required:'Required',optional:'Optional',repeated:'Repeated',inferred:'推定',nullObserved:'NULL観測',nullNotObserved:'NULL未観測',missingObserved:'missing観測',missingNotObserved:'missingなし',fieldId:'ID {id}',precisionScale:'p={precision}, s={scale}',formatDeclared:'ファイル定義',formatInferred:'データから推定',delimiter:'区切り {value}',headerDetected:'ヘッダーあり',headerNotDetected:'ヘッダーなし',columnMismatch:'列数不一致 {count}行',inferenceSettings:'推定スキーマ設定',sampleRowsLabel:'推定に使う行数',sample20k:'20,000行',sample100k:'100,000行',sampleAll:'全件',headerModeLabel:'CSV / TSVヘッダー',headerAuto:'自動判定',headerYes:'先頭行をヘッダーとして使用',headerNo:'ヘッダーなし',inferenceSettingsNote:'CSV / TSV / JSONL / NDJSONはデータから型を推定します。行数設定はすべてに適用され、ヘッダー設定はCSV / TSVだけに適用されます。',normalizedType:'正規化 {type}',normalizedComparison:'正規化比較: {before} → {after}',buildInfo:'ビルド情報',appVersion:'アプリ版',builtAt:'ビルド日時',parquetEngine:'Parquet解析',csvEngine:'CSV / TSV解析',jsonlEngine:'JSONL / NDJSON解析',runtimeNetwork:'実行時通信',none:'なし',footer:'ファイルはこの端末内だけで処理されます',helpTitle:'使い方と注意事項',close:'閉じる',helpBasicsTitle:'基本操作',helpStep1:'Beforeに比較元のParquet / CSV / TSV / JSONL / NDJSONを追加します。',helpStep2:'Afterに比較先のファイルを追加します。',helpStep3:'推定形式は必要に応じて行数設定を調整し、「スキーマを比較」で変更を確認します。',helpPrivacyTitle:'プライバシー',helpPrivacyBody:'ファイルはブラウザー内だけで処理し、外部サーバーへ送信しません。Parquetのスキーマは末尾のメタデータ領域から読み、先頭10行プレビューを開いた場合だけ必要な行データを追加で読みます。CSV / TSV / JSONL / NDJSONも必要な範囲だけを読みます。',helpNotesTitle:'注意事項',helpNote1:'CSV / TSV / JSONL / NDJSONの型やNULL情報はデータからの推定です。明示的な制約ではありません。',helpNote2:'Parquet / CSV / TSV / JSONL / NDJSONは形式をまたいで比較できます。形式固有の型表現は共通型へ正規化して判定します。',helpNote3:'壊れたファイルや推定範囲外にだけ存在する値は正しく判定できない場合があります。',helpOffline:'単一HTMLとしてローカルで直接開いて利用できます。',loadErrorToast:'ファイルを読み込めませんでした。',compareDone:'比較しました。',settingsReloaded:'推定スキーマを新しい設定で再解析しました。',impactBreaking:'破壊的変更の可能性',impactReview:'要確認',impactCompatible:'互換性ありの可能性',impactInfo:'情報',impactNone:'変更なし',impactSummaryTitle:'互換性への影響',reasonRemoved:'フィールドが削除されています。利用側が参照している場合は影響する可能性があります。',reasonRequiredAdded:'Requiredフィールドが追加されています。既存の書き込み側が値を提供できない可能性があります。',reasonOptionalAdded:'Optionalフィールドの追加です。既存フィールドの読み取りには影響しにくい変更です。',reasonRename:'同じField IDのfield pathが変わっています。Field IDを尊重する利用側では同一フィールドとして扱える可能性があります。',reasonStructure:'STRUCT / LIST / MAPの構造が変わっています。',reasonRequired:'OptionalからRequiredへ変更されています。NULLを含む既存データや書き込み側に影響する可能性があります。',reasonNullable:'RequiredからOptionalへ変更されています。',reasonNarrowing:'値域または精度が狭くなる型変更です。',reasonWidening:'値域または精度が広がる型変更です。',reasonTimestampSemantics:'TimestampのUTC調整など時間表現の意味が変わっています。',reasonTypeChange:'型が変わっています。利用側の型変換ルールを確認してください。',reasonDecimalPrecisionDown:'Decimal precisionが小さくなっています。表現できる値の範囲が狭くなる可能性があります。',reasonDecimalScale:'Decimal scaleが変わっています。小数点位置の解釈を確認してください。',reasonDecimalPrecisionUp:'Decimal precisionが大きくなっています。',reasonFieldId:'同じfield pathでField IDが変わっています。Field IDを使う利用側では別フィールドとして扱われる可能性があります。',reasonInferred:'CSV / TSV / JSONL / NDJSONのスキーマはデータからの推定です。変更がデータ契約の変更を意味するとは限らないため確認してください。',fieldSearchLabel:'Field path検索',fieldSearchPlaceholder:'field pathを検索',filterLabel:'表示フィルター',filterAll:'すべて',filterChanged:'変更のみ',filterAdded:'追加',filterRemoved:'削除',filterType:'型変更',filterBreaking:'破壊的変更の可能性',filterReview:'要確認',visibleCount:'{visible} / {total}フィールド表示',filterEmptyTitle:'条件に一致するフィールドはありません',filterEmptyBody:'検索語または表示フィルターを変更してください。',copyResult:'結果をコピー',saveMarkdown:'Markdown保存',saveJson:'JSON保存',copyDone:'比較結果をコピーしました。',copyFailed:'コピーできませんでした。',markdownSaved:'Markdownを保存しました。',jsonSaved:'JSONを保存しました。',exportFullNote:'出力にはフィルター前の比較結果全体を含みます。',swappedCompared:'Before / Afterを入れ替えて再比較しました。',helpNote4:'検索とフィルターは画面表示だけに適用されます。コピー、Markdown、JSONには比較結果全体を出力します。',reportGenerated:'Schema Diffで生成',reportSummary:'サマリー',reportChanges:'変更フィールド',reportNoChanges:'スキーマに差分はありません。'
+    },en:{
+      brandMeta:'Parquet / CSV / TSV / JSONL schema comparison · Fully local',introTitle:'Compare schemas of two data files',lead:'Compare declared Parquet schemas and inferred CSV / TSV / JSONL / NDJSON schemas locally without uploading files.',localBadge:'Fully local processing',workspaceTitle:'Files to compare',workspaceBody:'Add Parquet / CSV / TSV / JSONL / NDJSON files to Before and After.',before:'Before',after:'After',oldSchema:'OLD',newSchema:'NEW',waitingFile:'Choose a file',chooseFile:'Choose file',dropTitle:'Add Parquet / CSV / TSV / JSONL / NDJSON',dropHint:'Drop it here, or choose a file',loading:'Reading schema…',ready:'Schema loaded',invalid:'Could not read this file',unsupported:'Unsupported file format',swap:'Swap Before / After',compare:'Compare schemas',replaceFile:'Replace file',previewRows:'Preview first 10 rows',hidePreview:'Close preview',previewLoading:'Loading first 10 rows…',previewTitle:'First 10 rows',previewEmpty:'No data rows',previewEmptyParquet:'This Parquet file contains no data rows (schema only).',previewError:'Could not display the preview',previewRetry:'Try again',previewReadBytes:'Preview read {size}',previewRow:'Row',previewLazyNote:'Row data is read only when you open the preview.',previewUnsupportedCodec:'This Parquet compression codec is not supported by the preview',compareNeedBoth:'Add Before and After files',compareNeedBefore:'Add a Before file',compareNeedAfter:'Add an After file',compareLoading:'Reading schema…',compareReady:'Ready to compare both schemas',compareFixError:'Replace the file that could not be read',resultsTitle:'Comparison',resultsWaiting:'Choose any two supported files to compare schemas across formats.',formatMismatch:'Parquet, CSV, TSV, JSONL, and NDJSON can be compared across format groups.',emptyTitle:'No comparison yet',emptyBody:'Add a Parquet / CSV / TSV / JSONL file to both Before and After.',emptyNeedBeforeTitle:'Add a Before file',emptyNeedBeforeBody:'Add the original file to Before to continue.',emptyNeedAfterTitle:'Add an After file',emptyNeedAfterBody:'Add the new file to After to continue.',emptyLoadingTitle:'Reading schema',emptyLoadingBody:'Comparison will be available when loading finishes.',emptyErrorTitle:'Check the selected file',emptyErrorBody:'Replace the file that could not be read.',emptyReadyTitle:'Ready to compare',emptyReadyBody:'Select “Compare schemas” to view the differences.',sameTitle:'No schema differences',sameBody:'The compared schema details match.',changedCount:'{count} fields changed',summaryAll:'Fields',summaryAdded:'Added',summaryRemoved:'Removed',summaryModified:'Modified',field:'Field path',change:'Change',added:'Added',removed:'Removed',typeChanged:'Type',nullabilityChanged:'Nullability',decimalChanged:'Decimal',structureChanged:'Structure',fieldIdChanged:'Field ID',renamed:'Renamed',unchanged:'Unchanged',missing:'—',rows:'{count} rows',sampledRows:'{count} rows sampled',fields:'{count} fields',readBytes:'read {size}',metadataReadBytes:'metadata read {size}',required:'Required',optional:'Optional',repeated:'Repeated',inferred:'Inferred',nullObserved:'NULL observed',nullNotObserved:'No NULL observed',missingObserved:'Missing observed',missingNotObserved:'No missing fields',fieldId:'ID {id}',precisionScale:'p={precision}, s={scale}',formatDeclared:'Declared in file',formatInferred:'Inferred from data',delimiter:'delimiter {value}',headerDetected:'Header detected',headerNotDetected:'No header',columnMismatch:'{count} rows with different field counts',inferenceSettings:'Inference settings',sampleRowsLabel:'Rows used for inference',sample20k:'20,000 rows',sample100k:'100,000 rows',sampleAll:'All rows',headerModeLabel:'CSV / TSV header',headerAuto:'Auto-detect',headerYes:'Use first row as header',headerNo:'No header',inferenceSettingsNote:'CSV / TSV / JSONL / NDJSON schemas are inferred from data. The row limit applies to all inferred formats; header settings apply only to CSV / TSV.',normalizedType:'Normalized {type}',normalizedComparison:'Normalized comparison: {before} → {after}',buildInfo:'Build information',appVersion:'App version',builtAt:'Built at',parquetEngine:'Parquet parser',csvEngine:'CSV / TSV parser',jsonlEngine:'JSONL / NDJSON parser',runtimeNetwork:'Runtime network',none:'None',footer:'Files stay on this device',helpTitle:'How to use and notes',close:'Close',helpBasicsTitle:'Basic use',helpStep1:'Add the original Parquet / CSV / TSV / JSONL file to Before.',helpStep2:'Add the new file to After.',helpStep3:'Adjust the inference row limit if needed, then select “Compare schemas”.',helpPrivacyTitle:'Privacy',helpPrivacyBody:'Files are processed only in your browser and are not sent to a server. Parquet schema loading reads metadata near the file end and reads row data only when the first-10-row preview is opened. CSV / TSV / JSONL / NDJSON also read only the required range.',helpNotesTitle:'Notes',helpNote1:'CSV / TSV / JSONL / NDJSON types and null information are inferred from observed data, not explicit constraints.',helpNote2:'Parquet, CSV, TSV, JSONL, and NDJSON can be compared across formats. Format-specific type representations are normalized before comparison.',helpNote3:'Damaged files or values that exist only outside the sampled range may not be classified correctly.',helpOffline:'The app can be opened directly as a single local HTML file.',loadErrorToast:'Could not read the file.',compareDone:'Comparison complete.',settingsReloaded:'Inferred schemas were re-read using the new settings.',impactBreaking:'Potentially breaking',impactReview:'Review',impactCompatible:'Likely compatible',impactInfo:'Info',impactNone:'Unchanged',impactSummaryTitle:'Compatibility impact',reasonRemoved:'The field was removed and may affect consumers that reference it.',reasonRequiredAdded:'A Required field was added. Existing writers may not provide a value.',reasonOptionalAdded:'An Optional field was added and is less likely to affect readers of existing fields.',reasonRename:'The field path changed while the unique Field ID stayed the same. Consumers that honor Field IDs may treat it as the same field.',reasonStructure:'The STRUCT / LIST / MAP structure changed.',reasonRequired:'The field changed from Optional to Required, which may affect existing null values or writers.',reasonNullable:'The field changed from Required to Optional.',reasonNarrowing:'The type change reduces value range or precision.',reasonWidening:'The type change increases value range or precision.',reasonTimestampSemantics:'Timestamp semantics such as UTC adjustment changed.',reasonTypeChange:'The type changed. Review the conversion rules used by downstream consumers.',reasonDecimalPrecisionDown:'Decimal precision decreased, which may reduce the representable value range.',reasonDecimalScale:'Decimal scale changed. Review decimal-point interpretation.',reasonDecimalPrecisionUp:'Decimal precision increased.',reasonFieldId:'The Field ID changed at the same field path. Consumers that use Field IDs may treat it as a different field.',reasonInferred:'CSV / TSV / JSONL / NDJSON schemas are inferred from observed data. A difference does not necessarily mean the data contract changed, so review it.',fieldSearchLabel:'Field path search',fieldSearchPlaceholder:'Search field paths',filterLabel:'Display filter',filterAll:'All',filterChanged:'Changed only',filterAdded:'Added',filterRemoved:'Removed',filterType:'Type changes',filterBreaking:'Potentially breaking',filterReview:'Review',visibleCount:'Showing {visible} / {total} fields',filterEmptyTitle:'No fields match these conditions',filterEmptyBody:'Change the search term or display filter.',copyResult:'Copy result',saveMarkdown:'Save Markdown',saveJson:'Save JSON',copyDone:'Comparison result copied.',copyFailed:'Could not copy the result.',markdownSaved:'Markdown saved.',jsonSaved:'JSON saved.',exportFullNote:'Exports include the full comparison before display filters.',swappedCompared:'Swapped Before / After and compared again.',helpNote4:'Search and filters affect only the on-screen view. Copy, Markdown, and JSON export the full comparison.',reportGenerated:'Generated by Schema Diff',reportSummary:'Summary',reportChanges:'Changed fields',reportNoChanges:'No schema differences.'
+    }};
+    const $=s=>document.querySelector(s),state={before:null,after:null},generation={before:0,after:0},inferenceSettings={sampleRows:20000,headerMode:'auto'};let language=detectLanguage();let toastTimer=0;
+    function detectLanguage(){try{const saved=localStorage.getItem(`${APP_CONFIG.slug}:language`);if(saved==='ja'||saved==='en')return saved}catch{}return (navigator.language||'').toLowerCase().startsWith('ja')?'ja':'en'}function t(key,vars={}){let value=translations[language]?.[key]??translations.en[key]??key;for(const [k,v] of Object.entries(vars))value=value.replaceAll(`{${k}}`,String(v));return value}function formatNumber(n){return new Intl.NumberFormat(language).format(Number(n||0))}function formatBytes(n){if(n<1024)return `${n} B`;if(n<1024**2)return `${(n/1024).toFixed(n<10240?1:0)} KB`;return `${(n/1024**2).toFixed(1)} MB`}
+    function showToast(message,tone='default'){clearTimeout(toastTimer);const el=$('#appToast');$('#appToastMessage').textContent=message;el.dataset.tone=tone;el.classList.add('show');toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}window.AppToast=Object.freeze({show:showToast});
+    function applyLanguage(){document.documentElement.lang=language;document.title=language==='ja'?APP_CONFIG.nameJa:APP_CONFIG.name;$('#brandName').textContent=language==='ja'?APP_CONFIG.nameJa:APP_CONFIG.name;$('#footerName').textContent=language==='ja'?APP_CONFIG.nameJa:APP_CONFIG.name;$('#languageButton').textContent=language==='ja'?'EN':'日本語';$('#languageButton').setAttribute('aria-label',language==='ja'?'英語に切り替え':'Switch to Japanese');document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});document.querySelectorAll('[data-i18n-title]').forEach(el=>el.title=t(el.dataset.i18nTitle));document.querySelectorAll('[data-i18n-aria-label]').forEach(el=>el.setAttribute('aria-label',t(el.dataset.i18nAriaLabel)));document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>el.setAttribute('placeholder',t(el.dataset.i18nPlaceholder)));renderSide('before');renderSide('after');if(lastDiff)renderResults(lastDiff);updateButtons()}
+
+    // Metadata-only reader adapted from hyparquet 1.30.0 (MIT), commit f01340277ec2d4ad2e96a7629c30d04fb54a9e15.
+    // Schema extraction stays metadata-only; compact row-preview decoding below runs only after the user opens a preview.
+    const ParquetTypes=['BOOLEAN','INT32','INT64','INT96','FLOAT','DOUBLE','BYTE_ARRAY','FIXED_LEN_BYTE_ARRAY'];
+    const FieldRepetitionTypes=['REQUIRED','OPTIONAL','REPEATED'];
+    const ConvertedTypes=['UTF8','MAP','MAP_KEY_VALUE','LIST','ENUM','DECIMAL','DATE','TIME_MILLIS','TIME_MICROS','TIMESTAMP_MILLIS','TIMESTAMP_MICROS','UINT_8','UINT_16','UINT_32','UINT_64','INT_8','INT_16','INT_32','INT_64','JSON','BSON','INTERVAL'];
+    const EdgeInterpolationAlgorithms=['SPHERICAL','VINCENTY','THOMAS','ANDOYER','KARNEY'];
+    const STOP=0,TRUE=1,FALSE=2,BYTE=3,I16=4,I32=5,I64=6,DOUBLE=7,BINARY=8,LIST=9,STRUCT=12;
+    function readVarInt(reader){let result=0,shift=0;while(true){const byte=reader.view.getUint8(reader.offset++);result|=(byte&0x7f)<<shift;if(!(byte&0x80))return result;shift+=7}}
+    function readVarBigInt(reader){let result=0n,shift=0n;while(true){const byte=reader.view.getUint8(reader.offset++);result|=BigInt(byte&0x7f)<<shift;if(!(byte&0x80))return result;shift+=7n}}
+    function readZigZag(reader){const zigzag=readVarInt(reader);return zigzag>>>1^-(zigzag&1)}function readZigZagBigInt(reader){const zigzag=readVarBigInt(reader);return zigzag>>1n^-(zigzag&1n)}
+    function readElement(reader,type){switch(type){case TRUE:return true;case FALSE:return false;case BYTE:return reader.view.getInt8(reader.offset++);case I16:case I32:return readZigZag(reader);case I64:return readZigZagBigInt(reader);case DOUBLE:{const v=reader.view.getFloat64(reader.offset,true);reader.offset+=8;return v}case BINARY:{const len=readVarInt(reader),bytes=new Uint8Array(reader.view.buffer,reader.view.byteOffset+reader.offset,len);reader.offset+=len;return bytes}case LIST:{const byte=reader.view.getUint8(reader.offset++),elemType=byte&15;let size=byte>>4;if(size===15)size=readVarInt(reader);const boolType=elemType===TRUE||elemType===FALSE,values=new Array(size);for(let i=0;i<size;i++)values[i]=boolType?readElement(reader,BYTE)===1:readElement(reader,elemType);return values}case STRUCT:return deserializeTCompactProtocol(reader);default:throw new Error(`thrift unhandled type: ${type}`)}}
+    function deserializeTCompactProtocol(reader){const value={};let fid=0;while(reader.offset<reader.view.byteLength){const byte=reader.view.getUint8(reader.offset++),type=byte&15;if(type===STOP)break;const delta=byte>>4;fid=delta?fid+delta:readZigZag(reader);value[`field_${fid}`]=readElement(reader,type)}return value}
+    const decoder=new TextDecoder();function decode(value){return value&&decoder.decode(value)}function timeUnit(unit){if(unit?.field_1)return'MILLIS';if(unit?.field_2)return'MICROS';if(unit?.field_3)return'NANOS';return undefined}
+    function logicalType(value){if(value?.field_1)return{type:'STRING'};if(value?.field_2)return{type:'MAP'};if(value?.field_3)return{type:'LIST'};if(value?.field_4)return{type:'ENUM'};if(value?.field_5)return{type:'DECIMAL',scale:value.field_5.field_1,precision:value.field_5.field_2};if(value?.field_6)return{type:'DATE'};if(value?.field_7)return{type:'TIME',isAdjustedToUTC:value.field_7.field_1,unit:timeUnit(value.field_7.field_2)};if(value?.field_8)return{type:'TIMESTAMP',isAdjustedToUTC:value.field_8.field_1,unit:timeUnit(value.field_8.field_2)};if(value?.field_10)return{type:'INTEGER',bitWidth:value.field_10.field_1,isSigned:value.field_10.field_2};if(value?.field_11)return{type:'NULL'};if(value?.field_12)return{type:'JSON'};if(value?.field_13)return{type:'BSON'};if(value?.field_14)return{type:'UUID'};if(value?.field_15)return{type:'FLOAT16'};if(value?.field_16)return{type:'VARIANT',specification_version:value.field_16.field_1};if(value?.field_17)return{type:'GEOMETRY',crs:decode(value.field_17.field_1)};if(value?.field_18)return{type:'GEOGRAPHY',crs:decode(value.field_18.field_1),algorithm:EdgeInterpolationAlgorithms[value.field_18.field_2]};return undefined}
+    const ParquetEncodings=['PLAIN','GROUP_VAR_INT','PLAIN_DICTIONARY','RLE','BIT_PACKED','DELTA_BINARY_PACKED','DELTA_LENGTH_BYTE_ARRAY','DELTA_BYTE_ARRAY','RLE_DICTIONARY','BYTE_STREAM_SPLIT'];
+    const ParquetCompressionCodecs=['UNCOMPRESSED','SNAPPY','GZIP','LZO','BROTLI','LZ4','ZSTD','LZ4_RAW'];
+    const ParquetPageTypes=['DATA_PAGE','INDEX_PAGE','DICTIONARY_PAGE','DATA_PAGE_V2'];
+    function parseColumnMeta(raw){if(!raw)return null;return{type:ParquetTypes[raw.field_1],encodings:(raw.field_2||[]).map(i=>ParquetEncodings[i]),path_in_schema:(raw.field_3||[]).map(decode),codec:ParquetCompressionCodecs[raw.field_4],num_values:raw.field_5,total_uncompressed_size:raw.field_6,total_compressed_size:raw.field_7,data_page_offset:raw.field_9,index_page_offset:raw.field_10,dictionary_page_offset:raw.field_11}}
+    function parseRowGroup(raw){return{columns:(raw.field_1||[]).map(column=>({file_path:decode(column.field_1),file_offset:column.field_2,meta_data:parseColumnMeta(column.field_3),offset_index_offset:column.field_4,offset_index_length:column.field_5,column_index_offset:column.field_6,column_index_length:column.field_7})),total_byte_size:raw.field_2,num_rows:raw.field_3,file_offset:raw.field_5,total_compressed_size:raw.field_6}}
+    function parseMetadataBuffer(arrayBuffer){
+      if(!(arrayBuffer instanceof ArrayBuffer)||arrayBuffer.byteLength<8)throw new Error('parquet file is too short');
+      const view=new DataView(arrayBuffer);
+      if(view.getUint32(view.byteLength-4,true)!==0x31524150)throw new Error('parquet footer is not PAR1');
+      const metadataLength=view.getUint32(view.byteLength-8,true);
+      if(metadataLength>view.byteLength-8)throw new Error('invalid parquet metadata length');
+      const reader={view,offset:view.byteLength-8-metadataLength},metadata=deserializeTCompactProtocol(reader);
+      if(!Array.isArray(metadata.field_2)||!metadata.field_2.length)throw new Error('parquet schema is missing');
+      const schema=metadata.field_2.map(field=>({type:ParquetTypes[field.field_1],type_length:field.field_2,repetition_type:FieldRepetitionTypes[field.field_3],name:decode(field.field_4),num_children:field.field_5,converted_type:ConvertedTypes[field.field_6],scale:field.field_7,precision:field.field_8,field_id:field.field_9,logical_type:logicalType(field.field_10)}));
+      return{version:metadata.field_1,schema,num_rows:metadata.field_3,row_groups:(metadata.field_4||[]).map(parseRowGroup),key_value_metadata:(metadata.field_5||[]).map(item=>({key:decode(item.field_1),value:decode(item.field_2)})),created_by:decode(metadata.field_6),metadata_length:metadataLength}
+    }
+    async function parquetMetadataAsync(asyncBuffer,{initialFetchSize=1<<19}={}){if(!asyncBuffer||!(asyncBuffer.byteLength>=0))throw new Error('parquet expected AsyncBuffer');if(asyncBuffer.byteLength<8)throw new Error('parquet file is too short');const footerOffset=Math.max(0,asyncBuffer.byteLength-initialFetchSize),footerBuffer=await asyncBuffer.slice(footerOffset,asyncBuffer.byteLength),footerView=new DataView(footerBuffer);if(footerBuffer.byteLength<8||footerView.getUint32(footerBuffer.byteLength-4,true)!==0x31524150)throw new Error('parquet footer is not PAR1');const metadataLength=footerView.getUint32(footerBuffer.byteLength-8,true);if(metadataLength>asyncBuffer.byteLength-8)throw new Error('invalid parquet metadata length');if(metadataLength+8>footerBuffer.byteLength){const metadataOffset=asyncBuffer.byteLength-metadataLength-8,metadataBuffer=await asyncBuffer.slice(metadataOffset,footerOffset),combined=new ArrayBuffer(metadataLength+8),out=new Uint8Array(combined);out.set(new Uint8Array(metadataBuffer));out.set(new Uint8Array(footerBuffer),footerOffset-metadataOffset);return parseMetadataBuffer(combined)}return parseMetadataBuffer(footerBuffer)}
+    function schemaTree(schema,rootIndex,path){const element=schema[rootIndex],children=[];let count=1;if(element.num_children){while(children.length<element.num_children){const childElement=schema[rootIndex+count];if(!childElement)throw new Error('invalid parquet schema tree');const child=schemaTree(schema,rootIndex+count,[...path,childElement.name]);count+=child.count;children.push(child)}}return{count,element,children,path}}
+    function parquetSchema({schema}){return schemaTree(schema,0,[])}
+
+    function fileAsyncBuffer(file,tracker){return{byteLength:file.size,async slice(start,end){const safeStart=Math.max(0,start||0),safeEnd=Math.min(file.size,end??file.size),buffer=await file.slice(safeStart,safeEnd).arrayBuffer();tracker.bytes+=buffer.byteLength;tracker.requests+=1;return buffer}}}
+    function logicalLabel(e){const l=e.logical_type;if(l?.type==='INTEGER')return `${l.isSigned===false?'UINT':'INT'}${l.bitWidth||''}`;if(l?.type==='TIMESTAMP')return `TIMESTAMP${l.unit?`(${l.unit})`:''}`;if(l?.type==='TIME')return `TIME${l.unit?`(${l.unit})`:''}`;if(l?.type==='DECIMAL')return `DECIMAL(${l.precision??e.precision??'?'},${l.scale??e.scale??'?'})`;if(l?.type)return l.type;if(e.converted_type==='UTF8')return'STRING';if(e.converted_type==='DECIMAL')return `DECIMAL(${e.precision??'?'},${e.scale??'?'})`;return e.converted_type||e.type||'UNKNOWN'}
+    function structureKind(e){const logical=e.logical_type?.type,converted=e.converted_type;if(logical==='LIST'||converted==='LIST')return'LIST';if(logical==='MAP'||converted==='MAP'||converted==='MAP_KEY_VALUE')return'MAP';if(e.num_children)return'STRUCT';return'VALUE'}function normalizedDeclaredType(e,kind){if(kind!=='VALUE')return kind;const l=e.logical_type?.type,c=e.converted_type;if(l==='STRING'||c==='UTF8')return'STRING';if(l==='INTEGER')return `${l.isSigned===false?'UINT':'INT'}${l.bitWidth||''}`;if(l==='DECIMAL'||c==='DECIMAL')return'DECIMAL';if(l==='DATE'||c==='DATE')return'DATE';if(l==='TIMESTAMP'||c==='TIMESTAMP_MILLIS'||c==='TIMESTAMP_MICROS')return'TIMESTAMP';if(l==='TIME'||c==='TIME_MILLIS'||c==='TIME_MICROS')return'TIME';const m=/^(U?INT)_(8|16|32|64)$/.exec(c||'');if(m)return `${m[1]==='UINT'?'UINT':'INT'}${m[2]}`;if(l)return l;return({BOOLEAN:'BOOLEAN',INT32:'INT32',INT64:'INT64',FLOAT:'FLOAT32',DOUBLE:'FLOAT64',BYTE_ARRAY:'BINARY',FIXED_LEN_BYTE_ARRAY:'BINARY',INT96:'INT96'})[e.type]||e.type||'UNKNOWN'}
+    function baseTypeSignature(e,kind){return JSON.stringify({kind,physical:e.type||null,logical:e.logical_type?.type||null,logicalInteger:e.logical_type?.type==='INTEGER'?[e.logical_type.bitWidth,e.logical_type.isSigned]:null,logicalTime:e.logical_type?.type==='TIME'||e.logical_type?.type==='TIMESTAMP'?[e.logical_type.unit,e.logical_type.isAdjustedToUTC]:null,converted:e.converted_type||null,typeLength:e.type_length??null})}
+    function decimalSignature(e){const decimal=e.logical_type?.type==='DECIMAL'||e.converted_type==='DECIMAL';return decimal?JSON.stringify({precision:e.logical_type?.precision??e.precision??null,scale:e.logical_type?.scale??e.scale??null}):null}
+    function typeDisplay(e,kind){if(kind!=='VALUE')return kind;const logical=logicalLabel(e);if(logical&&logical!==e.type)return `${logical} · ${e.type}`;return e.type||logical||'UNKNOWN'}
+    function repetitionLabel(e){return e.repetition_type||'UNKNOWN'}
+    function fieldMeta(field){if(field?.source==='inferred'){const parts=[t('inferred'),field.observedNull?t('nullObserved'):t('nullNotObserved')];if(field.missingTracked)parts.push(field.observedMissing?t('missingObserved'):t('missingNotObserved'));return parts}const parts=[field.repetition];if(field.fieldId!==null&&field.fieldId!==undefined)parts.push(t('fieldId',{id:field.fieldId}));if(field.decimal)parts.push(t('precisionScale',{precision:field.precision??'?',scale:field.scale??'?'}));return parts}
+    function normalizeNode(node,path,depth,role='field'){
+      const e=node.element,kind=structureKind(e),normalizedType=normalizedDeclaredType(e,kind),field={name:e.name,path,depth,role,kind,source:'declared',type:typeDisplay(e,kind),normalizedType,repetition:repetitionLabel(e),nullable:e.repetition_type==='OPTIONAL',precision:e.logical_type?.precision??e.precision??null,scale:e.logical_type?.scale??e.scale??null,fieldId:e.field_id??null,logical:e.logical_type?.type??e.converted_type??null,physical:e.type??null,raw:e};field.decimal=e.logical_type?.type==='DECIMAL'||e.converted_type==='DECIMAL';field.typeSignature=baseTypeSignature(e,kind);field.normalizedSignature=JSON.stringify({kind,normalizedType});field.decimalSignature=decimalSignature(e);field.structureSignature=kind;return field
+    }
+    function flattenSchemaTree(tree){const fields=[];function addNode(node,path,depth,role='field'){const field=normalizeNode(node,path,depth,role);fields.push(field);const kind=field.kind;if(!node.children?.length)return;
+        if(kind==='LIST'){
+          const wrapper=node.children.length===1&&node.children[0].element.repetition_type==='REPEATED'?node.children[0]:null;
+          const elements=wrapper?.children?.length?wrapper.children:node.children;
+          if(elements.length===1){const element=elements[0],elementPath=`${path}[]`;addNode(element,elementPath,depth+1,'element')}else{for(const child of elements)addNode(child,`${path}[].${child.element.name}`,depth+1,'element')}
+          return
+        }
+        if(kind==='MAP'){
+          const wrapper=node.children.length===1&&node.children[0].element.repetition_type==='REPEATED'?node.children[0]:node;
+          const children=wrapper.children||[];
+          for(const child of children){const key=child.element.name==='key',value=child.element.name==='value',suffix=key?'{key}':value?'{value}':`{${child.element.name}}`;addNode(child,`${path}${suffix}`,depth+1,key?'key':value?'value':'entry')}
+          return
+        }
+        for(const child of node.children)addNode(child,`${path}.${child.element.name}`,depth+1,'field')
+      }
+      for(const child of tree.children)addNode(child,child.element.name,0,'field');return fields
+    }
+    function fileFormat(file){const name=(file?.name||'').toLowerCase();if(name.endsWith('.parquet'))return'parquet';if(name.endsWith('.tsv')||name.endsWith('.tab'))return'tsv';if(name.endsWith('.csv'))return'csv';if(name.endsWith('.jsonl'))return'jsonl';if(name.endsWith('.ndjson'))return'ndjson';return null}
+    async function readParquetSchema(file){const tracker={bytes:0,requests:0};const metadata=await parquetMetadataAsync(fileAsyncBuffer(file,tracker),{}),tree=parquetSchema(metadata),fields=flattenSchemaTree(tree);return{file,format:'parquet',source:'declared',metadata,fields,tracker}}
+    function cleanTextValue(value){return String(value??'').trim()}
+    function inferredValueType(value){const v=cleanTextValue(value);if(v==='')return'NULL';if(/^(?:true|false)$/i.test(v))return'BOOLEAN';if(/^[+-]?\d+$/.test(v)){try{const n=BigInt(v);if(n>=-2147483648n&&n<=2147483647n)return'INT32';return'INT64'}catch{return'STRING'}}if(/^[+-]?(?:\d+\.\d*|\.\d+|\d+[eE][+-]?\d+|\d+\.\d*[eE][+-]?\d+|\.\d+[eE][+-]?\d+)$/.test(v)&&Number.isFinite(Number(v)))return'FLOAT64';if(/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(`${v}T00:00:00Z`)))return'DATE';if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(v)&&!Number.isNaN(Date.parse(v.replace(' ','T'))))return'TIMESTAMP';return'STRING'}
+    function mergeInferredType(current,next){if(!current||current==='NULL')return next;if(next==='NULL')return current;if(current===next)return current;const numeric=new Set(['INT32','INT64','FLOAT64']);if(numeric.has(current)&&numeric.has(next)){if(current==='FLOAT64'||next==='FLOAT64')return'FLOAT64';return'INT64'}return'STRING'}
+    function createDelimitedState(delimiter,onRow,maxRows=Infinity){return{delimiter,onRow,maxRows,inQuotes:false,quotePending:false,skipLF:false,field:'',row:[],rows:0,stopped:false,error:null}}
+    function emitDelimitedRow(st){st.row.push(st.field);st.field='';const row=st.row;st.row=[];st.skipLF=false;if(row.every(v=>String(v).trim()===''))return;if(st.rows===0&&row.length)row[0]=row[0].replace(/^\uFEFF/,'');st.rows++;st.onRow(row);if(st.rows>=st.maxRows)st.stopped=true}
+    function parseDelimitedChunk(st,text,final=false){let i=0;if(st.quotePending){st.quotePending=false;if(text[0]==='"'){st.field+='"';i=1}else st.inQuotes=false}for(;i<text.length&&!st.stopped;i++){const ch=text[i];if(st.inQuotes){if(ch==='"'){if(i+1<text.length){if(text[i+1]==='"'){st.field+='"';i++}else st.inQuotes=false}else if(final)st.inQuotes=false;else st.quotePending=true}else st.field+=ch;continue}if(st.skipLF){st.skipLF=false;if(ch==='\n')continue}if(ch==='"'&&st.field===''){st.inQuotes=true;continue}if(ch===st.delimiter){st.row.push(st.field);st.field='';continue}if(ch==='\r'){emitDelimitedRow(st);st.skipLF=true;continue}if(ch==='\n'){emitDelimitedRow(st);continue}st.field+=ch}if(final&&!st.stopped){if(st.quotePending){st.quotePending=false;st.inQuotes=false}if(st.inQuotes){st.error='unterminated quoted field';return}if(st.field!==''||st.row.length)emitDelimitedRow(st)}}
+    function sampleRowsFromText(text,delimiter,maxRows=30){const rows=[],st=createDelimitedState(delimiter,row=>rows.push(row),maxRows);parseDelimitedChunk(st,text,false);return rows}
+    function delimiterScore(rows){if(rows.length<2)return rows.length===1&&rows[0].length>1?rows[0].length*8:-1e9;const counts=rows.map(r=>r.length).filter(Boolean);const freq=new Map();for(const n of counts)freq.set(n,(freq.get(n)||0)+1);let mode=1,modeCount=0;for(const [n,c] of freq)if(c>modeCount||(c===modeCount&&n>mode)){mode=n;modeCount=c}if(mode<2)return-1e8;const mismatch=counts.filter(n=>n!==mode).length;return modeCount*100+mode*8-mismatch*40}
+    function detectDelimiter(text,format){if(format==='tsv')return'\t';const candidates=[',','\t',';','|'];let best=',',score=-Infinity;for(const d of candidates){const rows=sampleRowsFromText(text,d,24),s=delimiterScore(rows);if(s>score){score=s;best=d}}return best}
+    function detectHeader(rows){if(rows.length<2)return false;const first=rows[0],width=first.length;if(width<1)return false;const names=first.map(v=>cleanTextValue(v));if(names.some(v=>!v)||new Set(names).size!==names.length)return false;const rest=rows.slice(1,Math.min(rows.length,16));let evidence=0;for(let c=0;c<width;c++){const ft=inferredValueType(first[c]),types=rest.map(r=>inferredValueType(r[c]??'')).filter(x=>x!=='NULL');if(ft==='STRING'&&types.some(x=>x!=='STRING'))evidence+=2}const headerish=names.filter(v=>/^[\p{L}_][\p{L}\p{N}_. -]*$/u.test(v)).length/width;return evidence>0||headerish>=.8}
+    function uniqueHeaders(raw,width){const used=new Map(),headers=[];for(let i=0;i<width;i++){let base=cleanTextValue(raw?.[i]??'')||`column_${i+1}`;const n=(used.get(base)||0)+1;used.set(base,n);headers.push(n===1?base:`${base}_${n}`)}return headers}
+    async function readPrefixBuffer(file,bytes,tracker){const b=await file.slice(0,Math.min(file.size,bytes)).arrayBuffer();tracker.bytes+=b.byteLength;tracker.requests++;return b}
+    async function streamDelimitedFile(file,delimiter,maxRows,onRow,tracker,initialBuffer=null){const chunkSize=128*1024,st=createDelimitedState(delimiter,onRow,maxRows),textDecoder=new TextDecoder('utf-8');let offset=0;if(initialBuffer?.byteLength){offset=initialBuffer.byteLength;const text=textDecoder.decode(initialBuffer,{stream:offset<file.size});parseDelimitedChunk(st,text,offset>=file.size)}while(offset<file.size&&!st.stopped){const end=Math.min(file.size,offset+chunkSize),buffer=await file.slice(offset,end).arrayBuffer();tracker.bytes+=buffer.byteLength;tracker.requests++;const text=textDecoder.decode(buffer,{stream:end<file.size});parseDelimitedChunk(st,text,end>=file.size);offset=end;if(!st.stopped)await new Promise(resolve=>setTimeout(resolve,0))}if(st.error)throw new Error(st.error);return{rows:st.rows,complete:offset>=file.size&&!st.stopped}}
+    function inferredField(name,index,stat){const type=stat.type||'NULL',observedNull=stat.nullSeen;return{name,path:name,depth:0,role:'field',kind:'VALUE',source:'inferred',type,normalizedType:type,repetition:'INFERRED',nullable:observedNull,observedNull,precision:null,scale:null,fieldId:null,logical:type,physical:null,raw:null,decimal:false,typeSignature:JSON.stringify({kind:'VALUE',inferred:type}),normalizedSignature:JSON.stringify({kind:'VALUE',normalizedType:type}),decimalSignature:null,structureSignature:'VALUE',index}}
+    async function readDelimitedSchema(file,format){const tracker={bytes:0,requests:0};const prefixBuffer=await readPrefixBuffer(file,128*1024,tracker),prefix=new TextDecoder('utf-8').decode(prefixBuffer),delimiter=detectDelimiter(prefix,format),previewRows=sampleRowsFromText(prefix,delimiter,30),headerMode=inferenceSettings.headerMode,hasHeader=headerMode==='yes'||(headerMode==='auto'&&detectHeader(previewRows)),sampleRows=inferenceSettings.sampleRows==='all'?Infinity:Number(inferenceSettings.sampleRows||20000),stats=[],headerRow={value:null},expected={value:null},mismatch={value:0},dataRows={value:0};let rowIndex=0;
+      const result=await streamDelimitedFile(file,delimiter,sampleRows+(hasHeader?1:0),row=>{rowIndex++;if(rowIndex===1&&hasHeader){headerRow.value=row;expected.value=row.length;return}dataRows.value++;if(expected.value===null)expected.value=row.length;if(row.length!==expected.value)mismatch.value++;const width=Math.max(expected.value||0,row.length,stats.length);while(stats.length<width)stats.push({type:null,nullSeen:false});for(let i=0;i<width;i++){const value=row[i]??'',type=inferredValueType(value),st=stats[i];if(type==='NULL')st.nullSeen=true;else st.type=mergeInferredType(st.type,type)}},tracker,prefixBuffer);
+      const width=Math.max(stats.length,expected.value||0,headerRow.value?.length||0),headers=uniqueHeaders(hasHeader?headerRow.value:null,width),fields=headers.map((name,i)=>inferredField(name,i,stats[i]||{type:'NULL',nullSeen:true}));return{file,format,source:'inferred',metadata:{num_rows:dataRows.value,sampled_rows:dataRows.value,complete:result.complete,delimiter,has_header:hasHeader,column_mismatch:mismatch.value,sample_limit:Number.isFinite(sampleRows)?sampleRows:null},fields,tracker}}
+    function jsonPrimitiveType(value){if(value===null)return'NULL';if(typeof value==='boolean')return'BOOLEAN';if(typeof value==='number'){if(!Number.isFinite(value))return'FLOAT64';if(Number.isInteger(value)){if(value>=-2147483648&&value<=2147483647)return'INT32';return'INT64'}return'FLOAT64'}if(typeof value==='string')return'STRING';return'STRING'}
+    function ensureJsonStat(stats,path,kind,indexCounter){let st=stats.get(path);const normalizedKind=kind==='NULL'?'UNKNOWN':kind;if(!st){st={path,kind:normalizedKind,type:null,nullSeen:false,presentCount:0,lastSeenRow:0,order:indexCounter.value++};stats.set(path,st)}else if(kind!=='NULL'){if(st.kind==='UNKNOWN')st.kind=kind;else if(st.kind!==kind){st.kind='MIXED';st.type='STRING'}}return st}
+    function markJsonPresence(st,rowNo){if(st.lastSeenRow!==rowNo){st.lastSeenRow=rowNo;st.presentCount++}}
+    function mergeJsonStatType(st,next){if(next==='NULL'){st.nullSeen=true;return}st.type=mergeInferredType(st.type,next)}
+    function observeJsonValue(stats,path,value,rowNo,indexCounter){if(!path)return;if(value===null){const st=ensureJsonStat(stats,path,'NULL',indexCounter);markJsonPresence(st,rowNo);st.nullSeen=true;return}if(Array.isArray(value)){const st=ensureJsonStat(stats,path,'LIST',indexCounter);markJsonPresence(st,rowNo);for(const item of value)observeJsonValue(stats,`${path}[]`,item,rowNo,indexCounter);return}if(value&&typeof value==='object'){const st=ensureJsonStat(stats,path,'STRUCT',indexCounter);markJsonPresence(st,rowNo);for(const [key,child] of Object.entries(value)){const childPath=`${path}.${key}`;observeJsonValue(stats,childPath,child,rowNo,indexCounter)}return}const st=ensureJsonStat(stats,path,'VALUE',indexCounter);markJsonPresence(st,rowNo);mergeJsonStatType(st,jsonPrimitiveType(value))}
+    function jsonFieldFromStat(st,totalRows){const kind=st.kind==='MIXED'||st.kind==='UNKNOWN'?'VALUE':st.kind,type=kind==='STRUCT'?'STRUCT':kind==='LIST'?'LIST':(st.type||'NULL'),observedMissing=st.presentCount<totalRows,depth=(st.path.match(/\./g)||[]).length+(st.path.match(/\[\]/g)||[]).length;return{name:st.path.split('.').pop(),path:st.path,depth,role:'field',kind,source:'inferred',type,normalizedType:type,repetition:'INFERRED',nullable:st.nullSeen||observedMissing,observedNull:st.nullSeen,observedMissing,missingTracked:true,precision:null,scale:null,fieldId:null,logical:type,physical:null,raw:null,decimal:false,typeSignature:JSON.stringify({kind,inferred:type}),normalizedSignature:JSON.stringify({kind,normalizedType:type}),decimalSignature:null,structureSignature:kind,index:st.order}}
+    async function streamJsonLines(file,maxRows,onObject,tracker){const chunkSize=128*1024,decoder=new TextDecoder('utf-8');let offset=0,carry='',lineNo=0,rows=0,stopped=false;while(offset<file.size&&!stopped){const end=Math.min(file.size,offset+chunkSize),buffer=await file.slice(offset,end).arrayBuffer();tracker.bytes+=buffer.byteLength;tracker.requests++;let text=decoder.decode(buffer,{stream:end<file.size});if(offset===0)text=text.replace(/^\uFEFF/,'');text=carry+text;const lines=text.split(/\r?\n/);carry=end<file.size?lines.pop():'';for(const raw of lines){lineNo++;const line=raw.trim();if(!line)continue;let value;try{value=JSON.parse(line)}catch{throw new Error(`invalid JSON at line ${lineNo}`)}if(!value||Array.isArray(value)||typeof value!=='object')throw new Error(`JSONL root must be an object at line ${lineNo}`);rows++;onObject(value,rows);if(rows>=maxRows){stopped=true;break}}offset=end;if(!stopped)await new Promise(resolve=>setTimeout(resolve,0))}if(!stopped&&carry.trim()){lineNo++;let value;try{value=JSON.parse(carry.trim())}catch{throw new Error(`invalid JSON at line ${lineNo}`)}if(!value||Array.isArray(value)||typeof value!=='object')throw new Error(`JSONL root must be an object at line ${lineNo}`);rows++;onObject(value,rows)}return{rows,complete:offset>=file.size&&!stopped}}
+    async function readJsonLinesSchema(file,format){const tracker={bytes:0,requests:0},sampleRows=inferenceSettings.sampleRows==='all'?Infinity:Number(inferenceSettings.sampleRows||20000),stats=new Map(),indexCounter={value:0};const result=await streamJsonLines(file,sampleRows,(obj,rowNo)=>{for(const [key,value] of Object.entries(obj))observeJsonValue(stats,key,value,rowNo,indexCounter)},tracker);if(result.rows===0)throw new Error('JSONL contains no objects');const fields=[...stats.values()].sort((a,b)=>a.order-b.order).map(st=>jsonFieldFromStat(st,result.rows));return{file,format,source:'inferred',metadata:{num_rows:result.rows,sampled_rows:result.rows,complete:result.complete,sample_limit:Number.isFinite(sampleRows)?sampleRows:null},fields,tracker}}
+    async function readSchema(file){const format=fileFormat(file);if(format==='parquet')return readParquetSchema(file);if(format==='csv'||format==='tsv')return readDelimitedSchema(file,format);if(format==='jsonl'||format==='ndjson')return readJsonLinesSchema(file,format);throw new Error('unsupported file format')}
+    function previewDisplayValue(value){
+      if(value===null)return{ text:'null', className:'preview-null' };
+      if(value===undefined)return{ text:'', className:'preview-null' };
+      if(typeof value==='bigint')return{ text:value.toString(), className:'' };
+      if(value instanceof Date)return{ text:value.toISOString(), className:'' };
+      if(value instanceof Uint8Array){const hex=Array.from(value.slice(0,24),b=>b.toString(16).padStart(2,'0')).join('');return{text:`0x${hex}${value.byteLength>24?'…':''}`,className:''}}
+      if(typeof value==='object'){try{return{text:JSON.stringify(value,(_,v)=>typeof v==='bigint'?v.toString():v),className:''}}catch{return{text:String(value),className:''}}}
+      return{ text:String(value), className:'' };
+    }
+    function previewColumns(rows,preferred=[]){const seen=new Set(),columns=[];for(const name of preferred||[]){if(!seen.has(name)){seen.add(name);columns.push(name)}}for(const row of rows||[]){if(row&&typeof row==='object'&&!Array.isArray(row)){for(const key of Object.keys(row))if(!seen.has(key)){seen.add(key);columns.push(key)}}}return columns}
+    async function readDelimitedPreview(file,schema){const tracker={bytes:0,requests:0},m=schema.metadata||{},hasHeader=!!m.has_header,rows=[],headers=schema.fields.filter(f=>f.depth===0).map(f=>f.path),raw=[];await streamDelimitedFile(file,m.delimiter|| (schema.format==='tsv'?'\t':','),10+(hasHeader?1:0),row=>raw.push(row),tracker);let data=raw;if(hasHeader)data=raw.slice(1);for(const row of data.slice(0,10)){const obj={};for(let i=0;i<Math.max(headers.length,row.length);i++)obj[headers[i]||`column_${i+1}`]=row[i]??'';rows.push(obj)}return{columns:previewColumns(rows,headers),rows,tracker}}
+    async function readJsonLinesPreview(file){const tracker={bytes:0,requests:0},rows=[];await streamJsonLines(file,10,obj=>rows.push(obj),tracker);return{columns:previewColumns(rows),rows,tracker}}
+    // Lazy first-row Parquet preview. Schema extraction remains metadata-only;
+    // these page/codec helpers are invoked only when a user opens a preview.
+    function parquetLeafSchemaPaths(metadata){
+      const root=parquetSchema(metadata),out=[];
+      function walk(node,ancestors=[]){
+        const chain=[...ancestors,node],e=node.element;
+        if(!node.children?.length&&node.path?.length)out.push({path:[...node.path],chain,element:e,maxDefinitionLevel:chain.slice(1).filter(x=>x.element.repetition_type!=='REQUIRED').length,maxRepetitionLevel:chain.slice(1).filter(x=>x.element.repetition_type==='REPEATED').length});
+        for(const child of node.children||[])walk(child,chain)
+      }
+      walk(root,[]);return out
+    }
+    function parquetPageHeader(reader){const raw=deserializeTCompactProtocol(reader);return{type:ParquetPageTypes[raw.field_1],uncompressed_page_size:Number(raw.field_2||0),compressed_page_size:Number(raw.field_3||0),data_page_header:raw.field_5&&{num_values:Number(raw.field_5.field_1||0),encoding:ParquetEncodings[raw.field_5.field_2],definition_level_encoding:ParquetEncodings[raw.field_5.field_3],repetition_level_encoding:ParquetEncodings[raw.field_5.field_4]},dictionary_page_header:raw.field_7&&{num_values:Number(raw.field_7.field_1||0),encoding:ParquetEncodings[raw.field_7.field_2]},data_page_header_v2:raw.field_8&&{num_values:Number(raw.field_8.field_1||0),num_nulls:Number(raw.field_8.field_2||0),num_rows:Number(raw.field_8.field_3||0),encoding:ParquetEncodings[raw.field_8.field_4],definition_levels_byte_length:Number(raw.field_8.field_5||0),repetition_levels_byte_length:Number(raw.field_8.field_6||0),is_compressed:raw.field_8.field_7===undefined?true:!!raw.field_8.field_7}}}
+    function parquetBitWidth(maxLevel){return maxLevel<=0?0:32-Math.clz32(maxLevel)}
+    function parquetReadHybrid(reader,bitWidth,count,{byteLength=null,prefixed=false}={}){
+      if(count<=0)return[];
+      let end=byteLength===null?reader.view.byteLength:reader.offset+byteLength;
+      if(prefixed){if(reader.offset+4>reader.view.byteLength)throw new Error('Parquet level data is truncated');const len=reader.view.getUint32(reader.offset,true);reader.offset+=4;end=Math.min(reader.view.byteLength,reader.offset+len)}
+      const out=[];
+      if(bitWidth===0){while(out.length<count)out.push(0);reader.offset=end;return out}
+      const byteWidth=Math.ceil(bitWidth/8),mask=(1n<<BigInt(bitWidth))-1n;
+      while(out.length<count&&reader.offset<end){const header=readVarInt(reader);if(header&1){const groups=header>>1,total=groups*8,bits=total*bitWidth,bytes=Math.ceil(bits/8),start=reader.offset;for(let i=0;i<total&&out.length<count;i++){const bit=i*bitWidth,base=start+(bit>>3),shift=bit&7;let chunk=0n;const needed=Math.ceil((shift+bitWidth)/8);for(let b=0;b<needed;b++)chunk|=BigInt(reader.view.getUint8(base+b))<<BigInt(b*8);out.push(Number((chunk>>BigInt(shift))&mask))}reader.offset=start+bytes}else{const run=header>>1;let value=0;for(let b=0;b<byteWidth;b++)value|=reader.view.getUint8(reader.offset++)<<(8*b);for(let i=0;i<run&&out.length<count;i++)out.push(value)}}
+      if(out.length<count)throw new Error('Parquet RLE/bit-packed data is truncated');
+      if(byteLength!==null||prefixed)reader.offset=end;return out
+    }
+    function parquetPlainValues(reader,type,count,typeLength){
+      if(count<=0)return[];const out=new Array(count),v=reader.view;
+      if(type==='BOOLEAN'){for(let i=0;i<count;i++){const b=v.getUint8(reader.offset+(i>>3));out[i]=!!(b&(1<<(i&7)))}reader.offset+=Math.ceil(count/8);return out}
+      if(type==='INT32'){for(let i=0;i<count;i++){out[i]=v.getInt32(reader.offset,true);reader.offset+=4}return out}
+      if(type==='INT64'){for(let i=0;i<count;i++){out[i]=v.getBigInt64(reader.offset,true);reader.offset+=8}return out}
+      if(type==='INT96'){for(let i=0;i<count;i++){const lo=v.getBigUint64(reader.offset,true),julian=BigInt(v.getUint32(reader.offset+8,true));out[i]=(julian-2440588n)*86400000000000n+lo;reader.offset+=12}return out}
+      if(type==='FLOAT'){for(let i=0;i<count;i++){out[i]=v.getFloat32(reader.offset,true);reader.offset+=4}return out}
+      if(type==='DOUBLE'){for(let i=0;i<count;i++){out[i]=v.getFloat64(reader.offset,true);reader.offset+=8}return out}
+      if(type==='BYTE_ARRAY'){for(let i=0;i<count;i++){const len=v.getUint32(reader.offset,true);reader.offset+=4;out[i]=new Uint8Array(v.buffer,v.byteOffset+reader.offset,len);reader.offset+=len}return out}
+      if(type==='FIXED_LEN_BYTE_ARRAY'){if(!typeLength)throw new Error('Parquet fixed byte length is missing');for(let i=0;i<count;i++){out[i]=new Uint8Array(v.buffer,v.byteOffset+reader.offset,typeLength);reader.offset+=typeLength}return out}
+      throw new Error(`Unsupported Parquet physical type: ${type}`)
+    }
+    function parquetDeltaBinary(reader,count,useBigInt=false){
+      if(count<=0)return[];const blockSize=readVarInt(reader),miniBlocks=readVarInt(reader);readVarInt(reader);let previous=readZigZagBigInt(reader),out=new Array(count),pos=0;out[pos++]=useBigInt?previous:Number(previous);const perMini=blockSize/miniBlocks;
+      while(pos<count){const minDelta=readZigZagBigInt(reader),widths=new Uint8Array(miniBlocks);for(let i=0;i<miniBlocks;i++)widths[i]=reader.view.getUint8(reader.offset++);for(let m=0;m<miniBlocks&&pos<count;m++){const width=widths[m],values=Math.min(perMini,count-pos);if(width===0){for(let i=0;i<values;i++){previous+=minDelta;out[pos++]=useBigInt?previous:Number(previous)}}else{let bitPos=0;for(let i=0;i<values;i++){const base=reader.offset+(bitPos>>3),shift=bitPos&7,mask=(1n<<BigInt(width))-1n;let chunk=0n,need=Math.ceil((shift+width)/8);for(let b=0;b<need;b++)chunk|=BigInt(reader.view.getUint8(base+b))<<BigInt(8*b);const delta=minDelta+((chunk>>BigInt(shift))&mask);previous+=delta;out[pos++]=useBigInt?previous:Number(previous);bitPos+=width}reader.offset+=Math.ceil(perMini*width/8)}}}
+      return out
+    }
+    function parquetDeltaLengthByteArray(reader,count){const lengths=parquetDeltaBinary(reader,count,false),out=new Array(count);for(let i=0;i<count;i++){const len=lengths[i];out[i]=new Uint8Array(reader.view.buffer,reader.view.byteOffset+reader.offset,len);reader.offset+=len}return out}
+    function parquetDeltaByteArray(reader,count){const prefixes=parquetDeltaBinary(reader,count,false),suffixes=parquetDeltaBinary(reader,count,false),out=new Array(count);for(let i=0;i<count;i++){const suffix=new Uint8Array(reader.view.buffer,reader.view.byteOffset+reader.offset,suffixes[i]);reader.offset+=suffixes[i];const prefix=prefixes[i]||0;if(prefix){const value=new Uint8Array(prefix+suffix.length);value.set(out[i-1]?.subarray(0,prefix)||new Uint8Array());value.set(suffix,prefix);out[i]=value}else out[i]=suffix}return out}
+    function parquetByteStreamSplit(reader,type,count,typeLength){const widths={INT32:4,FLOAT:4,INT64:8,DOUBLE:8},width=widths[type]||typeLength;if(!width)throw new Error(`Unsupported BYTE_STREAM_SPLIT type: ${type}`);const bytes=new Uint8Array(count*width);for(let b=0;b<width;b++)for(let i=0;i<count;i++)bytes[i*width+b]=reader.view.getUint8(reader.offset++);const r={view:new DataView(bytes.buffer),offset:0};return parquetPlainValues(r,type,count,typeLength)}
+    function parquetDecodeEncodedValues(reader,encoding,type,count,typeLength,dictionary){
+      if(encoding==='PLAIN')return parquetPlainValues(reader,type,count,typeLength);
+      if(encoding==='PLAIN_DICTIONARY'||encoding==='RLE_DICTIONARY'){if(!dictionary)throw new Error('Parquet dictionary page is missing');const width=reader.view.getUint8(reader.offset++),indices=parquetReadHybrid(reader,width,count,{byteLength:reader.view.byteLength-reader.offset});return indices.map(i=>dictionary[i])}
+      if(encoding==='RLE'&&type==='BOOLEAN')return parquetReadHybrid(reader,1,count,{byteLength:reader.view.byteLength-reader.offset}).map(Boolean);
+      if(encoding==='DELTA_BINARY_PACKED'&&(type==='INT32'||type==='INT64'))return parquetDeltaBinary(reader,count,type==='INT64');
+      if(encoding==='DELTA_LENGTH_BYTE_ARRAY'&&type==='BYTE_ARRAY')return parquetDeltaLengthByteArray(reader,count);
+      if(encoding==='DELTA_BYTE_ARRAY'&&type==='BYTE_ARRAY')return parquetDeltaByteArray(reader,count);
+      if(encoding==='BYTE_STREAM_SPLIT')return parquetByteStreamSplit(reader,type,count,typeLength);
+      throw new Error(`Unsupported Parquet encoding: ${encoding}`)
+    }
+    function parquetSnappy(input,expectedLength){const output=new Uint8Array(expectedLength);let i=0,o=0,shift=0,length=0;while(i<input.length){const b=input[i++];length|=(b&0x7f)<<shift;if(!(b&0x80))break;shift+=7}while(i<input.length){const tag=input[i++],kind=tag&3;if(kind===0){let len=(tag>>2)+1;if(len>60){const extra=len-60;len=0;for(let b=0;b<extra;b++)len|=input[i++]<<(8*b);len+=1}output.set(input.subarray(i,i+len),o);i+=len;o+=len;continue}let len,offset;if(kind===1){len=((tag>>2)&7)+4;offset=input[i++]+((tag>>5)<<8)}else if(kind===2){len=(tag>>2)+1;offset=input[i++]|(input[i++]<<8)}else{len=(tag>>2)+1;offset=(input[i++]|(input[i++]<<8)|(input[i++]<<16)|(input[i++]<<24))>>>0}if(!offset||offset>o)throw new Error('Invalid Parquet Snappy offset');for(let n=0;n<len;n++)output[o+n]=output[o-offset+n];o+=len}if(o!==expectedLength)throw new Error('Parquet Snappy length mismatch');return output}
+    function parquetLz4Raw(input,expectedLength){const out=new Uint8Array(expectedLength);let i=0,o=0;while(i<input.length){const token=input[i++];let lit=token>>4;if(lit===15){let x=255;while(x===255){x=input[i++];lit+=x}}out.set(input.subarray(i,i+lit),o);i+=lit;o+=lit;if(i>=input.length)break;const offset=input[i++]|(input[i++]<<8);if(!offset||offset>o)throw new Error('Invalid Parquet LZ4 offset');let len=(token&15)+4;if((token&15)===15){let x=255;while(x===255){x=input[i++];len+=x}}for(let n=0;n<len;n++)out[o+n]=out[o-offset+n];o+=len}if(o!==expectedLength)throw new Error('Parquet LZ4 length mismatch');return out}
+    function parquetLz4(input,expectedLength){try{const out=new Uint8Array(expectedLength);let i=0,o=0;while(i<input.length-8){const uncompressed=(input[i++]<<24)|(input[i++]<<16)|(input[i++]<<8)|input[i++],compressed=(input[i++]<<24)|(input[i++]<<16)|(input[i++]<<8)|input[i++];if(compressed<0||uncompressed<0||i+compressed>input.length)throw new Error('not hadoop lz4');const chunk=parquetLz4Raw(input.subarray(i,i+compressed),uncompressed);out.set(chunk,o);o+=uncompressed;i+=compressed}if(i!==input.length||o!==expectedLength)throw new Error('not hadoop lz4');return out}catch{return parquetLz4Raw(input,expectedLength)}}
+    async function parquetStreamDecompress(format,input){const ds=new DecompressionStream(format),stream=new Blob([input]).stream().pipeThrough(ds),buffer=await new Response(stream).arrayBuffer();return new Uint8Array(buffer)}
+    async function parquetDecompress(codec,input,expectedLength){
+      if(codec==='UNCOMPRESSED')return input;
+      if(codec==='SNAPPY')return parquetSnappy(input,expectedLength);
+      if(codec==='LZ4_RAW')return parquetLz4Raw(input,expectedLength);
+      if(codec==='LZ4')return parquetLz4(input,expectedLength);
+      if(codec==='GZIP'){const out=await parquetStreamDecompress('gzip',input);if(out.length!==expectedLength)throw new Error('Parquet GZIP length mismatch');return out}
+      if(codec==='BROTLI'||codec==='ZSTD'){for(const name of codec==='BROTLI'?['brotli','br']:['zstd'])try{const out=await parquetStreamDecompress(name,input);if(out.length===expectedLength)return out}catch{};throw new Error(`${t('previewUnsupportedCodec')}: ${codec}`)}
+      throw new Error(`${t('previewUnsupportedCodec')}: ${codec}`)
+    }
+    function parquetSignedBigEndian(bytes){let value=0n;for(const b of bytes)value=(value<<8n)+BigInt(b);const bits=BigInt(bytes.length*8);if(bytes.length&&value>=(1n<<(bits-1n)))value-=1n<<bits;return value}
+    function parquetConvertValue(value,element){if(value===null||value===undefined)return value;const l=element.logical_type,c=element.converted_type;
+      if((l?.type==='STRING'||c==='UTF8')&&value instanceof Uint8Array)return decoder.decode(value);
+      if((l?.type==='JSON'||c==='JSON')&&value instanceof Uint8Array){try{return JSON.parse(decoder.decode(value))}catch{return decoder.decode(value)}}
+      if(l?.type==='DATE'||c==='DATE'){if(value instanceof Date)return value;return new Date(Number(value)*86400000)}
+      if(l?.type==='TIMESTAMP'){if(value instanceof Date)return value;const n=typeof value==='bigint'?value:BigInt(value),div=l.unit==='NANOS'?1000000n:l.unit==='MICROS'?1000n:1n;return new Date(Number(n/div))}
+      if(c==='TIMESTAMP_MILLIS'){if(value instanceof Date)return value;return new Date(Number(typeof value==='bigint'?value:BigInt(value)))}
+      if(c==='TIMESTAMP_MICROS'){if(value instanceof Date)return value;return new Date(Number((typeof value==='bigint'?value:BigInt(value))/1000n))}
+      if(element.type==='INT96'&&typeof value==='bigint')return new Date(Number(value/1000000n));
+      if(l?.type==='DECIMAL'||c==='DECIMAL'){if(typeof value==='string'&&/^[+-]?\d+(?:\.\d+)?$/.test(value))return value;const scale=Number(l?.scale??element.scale??0),raw=value instanceof Uint8Array?parquetSignedBigEndian(value):typeof value==='bigint'?value:BigInt(value);const sign=raw<0n?'-':'',abs=raw<0n?-raw:raw,text=abs.toString().padStart(scale+1,'0');return scale?`${sign}${text.slice(0,-scale)}.${text.slice(-scale)}`:`${sign}${text}`}
+      if(l?.type==='INTEGER'&&l.isSigned===false&&typeof value==='bigint')return BigInt.asUintN(Number(l.bitWidth||64),value);
+      return value
+    }
+    function parquetAssembleEntries(values,defs,reps,maxDef,maxRep,numValues){const rows=[];let valueIndex=0;if(maxRep===0){for(let i=0;i<numValues;i++){const present=maxDef===0||defs[i]===maxDef;rows.push(present?values[valueIndex++]:null)}return rows}let current=null;for(let i=0;i<numValues;i++){if(i===0||reps[i]===0){current=[];rows.push(current)}const present=maxDef===0||defs[i]===maxDef;if(present)current.push(values[valueIndex++])}return rows}
+    async function parquetDecodeColumnChunk(buffer,column,leaf,rowLimit){const meta=column.meta_data,reader={view:new DataView(buffer),offset:0},rows=[],maxDef=leaf.maxDefinitionLevel,maxRep=leaf.maxRepetitionLevel;let dictionary=null;
+      while(reader.offset<reader.view.byteLength&&rows.length<rowLimit){const header=parquetPageHeader(reader),payloadStart=reader.offset,payloadEnd=payloadStart+header.compressed_page_size;if(payloadEnd>reader.view.byteLength)throw new Error('Parquet page is truncated');const payload=new Uint8Array(reader.view.buffer,reader.view.byteOffset+payloadStart,header.compressed_page_size);reader.offset=payloadEnd;
+        if(header.type==='DICTIONARY_PAGE'){const raw=await parquetDecompress(meta.codec,payload,header.uncompressed_page_size),r={view:new DataView(raw.buffer,raw.byteOffset,raw.byteLength),offset:0};dictionary=parquetPlainValues(r,leaf.element.type,header.dictionary_page_header?.num_values||0,leaf.element.type_length);continue}
+        if(header.type!=='DATA_PAGE'&&header.type!=='DATA_PAGE_V2')continue;
+        let defs=[],reps=[],values=[],numValues=0;
+        if(header.type==='DATA_PAGE'){const h=header.data_page_header;if(!h)throw new Error('Parquet data page header is missing');numValues=h.num_values;const raw=await parquetDecompress(meta.codec,payload,header.uncompressed_page_size),r={view:new DataView(raw.buffer,raw.byteOffset,raw.byteLength),offset:0};if(maxRep)reps=parquetReadHybrid(r,parquetBitWidth(maxRep),numValues,{prefixed:true});if(maxDef)defs=parquetReadHybrid(r,parquetBitWidth(maxDef),numValues,{prefixed:true});let nonNull=maxDef?defs.filter(x=>x===maxDef).length:numValues;values=parquetDecodeEncodedValues(r,h.encoding,leaf.element.type,nonNull,leaf.element.type_length,dictionary).map(v=>parquetConvertValue(v,leaf.element))
+        }else{const h=header.data_page_header_v2;if(!h)throw new Error('Parquet data page v2 header is missing');numValues=h.num_values;const repBytes=payload.subarray(0,h.repetition_levels_byte_length),defBytes=payload.subarray(h.repetition_levels_byte_length,h.repetition_levels_byte_length+h.definition_levels_byte_length),encoded=payload.subarray(h.repetition_levels_byte_length+h.definition_levels_byte_length);if(maxRep){const rr={view:new DataView(repBytes.buffer,repBytes.byteOffset,repBytes.byteLength),offset:0};reps=parquetReadHybrid(rr,parquetBitWidth(maxRep),numValues,{byteLength:repBytes.byteLength})}if(maxDef){const dr={view:new DataView(defBytes.buffer,defBytes.byteOffset,defBytes.byteLength),offset:0};defs=parquetReadHybrid(dr,parquetBitWidth(maxDef),numValues,{byteLength:defBytes.byteLength})}const uncompressedData=header.uncompressed_page_size-h.repetition_levels_byte_length-h.definition_levels_byte_length,raw=h.is_compressed?await parquetDecompress(meta.codec,encoded,uncompressedData):encoded,r={view:new DataView(raw.buffer,raw.byteOffset,raw.byteLength),offset:0},nonNull=numValues-h.num_nulls;values=parquetDecodeEncodedValues(r,h.encoding,leaf.element.type,nonNull,leaf.element.type_length,dictionary).map(v=>parquetConvertValue(v,leaf.element))}
+        const assembled=parquetAssembleEntries(values,defs,reps,maxDef,maxRep,numValues);for(const value of assembled){rows.push(value);if(rows.length>=rowLimit)break}
+      }return rows
+    }
+    function parquetPreviewColumnName(path){if(path.length===1)return path[0];return path.join('.')}
+    function parquetRowCountHint(metadata){
+      const counts=[Number(metadata?.num_rows||0)];
+      for(const group of metadata?.row_groups||[])counts.push(Number(group?.num_rows||0));
+      return Math.max(0,...counts.filter(Number.isFinite))
+    }
+    async function parquetPreviewRows(file,schema,rowLimit=10){const metadata=schema.metadata,tracker={bytes:0,requests:0},topColumns=schema.fields.filter(f=>f.depth===0).map(f=>f.path),groups=metadata?.row_groups||[];
+      if(!groups.length){if(parquetRowCountHint(metadata)>0)throw new Error('Parquet row group metadata is missing');return{columns:topColumns,rows:[],tracker}}
+      const rowGroup=groups.find(group=>Number(group?.num_rows||0)>0||(group?.columns||[]).some(column=>Number(column?.meta_data?.num_values||0)>0))||groups[0],leaves=parquetLeafSchemaPaths(metadata),leafMap=new Map(leaves.map(x=>[x.path.join('.'),x])),columns=[],columnValues=[];
+      for(const column of rowGroup.columns||[]){const meta=column.meta_data;if(!meta?.path_in_schema?.length)continue;const key=meta.path_in_schema.join('.'),leaf=leafMap.get(key);if(!leaf)continue;const start=Number(meta.dictionary_page_offset??meta.data_page_offset??column.file_offset??0),size=Number(meta.total_compressed_size||0),end=Math.min(file.size,start+size);if(!(start>=0&&end>start))continue;const buffer=await file.slice(start,end).arrayBuffer();tracker.bytes+=buffer.byteLength;tracker.requests++;const values=await parquetDecodeColumnChunk(buffer,column,leaf,rowLimit),name=parquetPreviewColumnName(meta.path_in_schema);columns.push(name);columnValues.push(values);await new Promise(resolve=>setTimeout(resolve,0))}
+      const declaredCount=Math.max(Number(rowGroup?.num_rows||0),Number(metadata?.num_rows||0)),decodedCount=Math.max(0,...columnValues.map(values=>values?.length||0)),count=Math.min(rowLimit,declaredCount||decodedCount);
+      if(count>0&&!columns.length)throw new Error('Parquet preview could not match row data columns to the schema');
+      const hasEncodedValues=(rowGroup.columns||[]).some(column=>Number(column?.meta_data?.num_values||0)>0);
+      if(count===0&&hasEncodedValues)throw new Error('Parquet preview could not determine the row count');
+      const rows=Array.from({length:count},()=>({}));for(let c=0;c<columns.length;c++)for(let r=0;r<count;r++)rows[r][columns[c]]=columnValues[c]?.[r];return{columns:columns.length?columns:topColumns,rows,tracker}
+    }
+
+    async function readParquetPreview(file,schema){
+      if(typeof parquetPreviewRows==='function')return parquetPreviewRows(file,schema,10);
+      throw new Error('Parquet row preview decoder is not available');
+    }
+    async function readFilePreview(entry){const format=entry.schema.format;if(format==='csv'||format==='tsv')return readDelimitedPreview(entry.file,entry.schema);if(format==='jsonl'||format==='ndjson')return readJsonLinesPreview(entry.file);if(format==='parquet')return readParquetPreview(entry.file,entry.schema);throw new Error('unsupported preview format')}
+    function previewMarkup(side,entry){const pv=entry.preview||{open:false};if(!pv.open)return'';if(pv.loading)return`<div class="file-preview" id="${side}Preview" aria-live="polite"><div class="preview-status"><svg class="loading-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8" opacity=".25"/><path d="M20 12a8 8 0 0 0-8-8"/></svg><span>${escapeHtml(t('previewLoading'))}</span></div></div>`;if(pv.error)return`<div class="file-preview" id="${side}Preview" aria-live="polite"><div class="preview-status error"><span>${escapeHtml(t('previewError'))}</span></div><div class="preview-error-detail">${escapeHtml(pv.error)}</div><button class="button" type="button" data-preview-retry="${side}">${escapeHtml(t('previewRetry'))}</button></div>`;if(!pv.data)return'';const {columns=[],rows=[],tracker={}}=pv.data,meta=tracker.bytes?escapeHtml(t('previewReadBytes',{size:formatBytes(tracker.bytes)})):'';if(!rows.length){const emptyKey=entry.schema.format==='parquet'?'previewEmptyParquet':'previewEmpty';return`<div class="file-preview" id="${side}Preview"><div class="preview-head"><span class="preview-title">${escapeHtml(t('previewTitle'))}</span>${meta?`<span class="preview-meta">${meta}</span>`:''}</div><div class="preview-empty">${escapeHtml(t(emptyKey))}</div></div>`};const head=columns.map(c=>`<th title="${escapeHtml(c)}">${escapeHtml(c)}</th>`).join(''),body=rows.slice(0,10).map((row,i)=>`<tr><td>${i+1}</td>${columns.map(c=>{const v=previewDisplayValue(row?.[c]),title=v.text.length>80?` title="${escapeHtml(v.text)}"`:'';return`<td class="${v.className}"${title}>${escapeHtml(v.text)}</td>`}).join('')}</tr>`).join('');return`<div class="file-preview" id="${side}Preview"><div class="preview-head"><span class="preview-title">${escapeHtml(t('previewTitle'))}</span>${meta?`<span class="preview-meta">${meta}</span>`:''}</div><div class="preview-scroll" tabindex="0"><table class="preview-table"><thead><tr><th>#</th>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`}
+    async function togglePreview(side,{retry=false}={}){const entry=state[side];if(!entry?.schema)return;entry.preview??={open:false,loading:false,data:null,error:null};if(!retry&&entry.preview.open){entry.preview.open=false;renderSide(side);updateButtons();return}entry.preview.open=true;if(entry.preview.data&&!retry){renderSide(side);updateButtons();return}entry.preview.loading=true;entry.preview.error=null;renderSide(side);updateButtons();const current=generation[side];try{const data=await readFilePreview(entry);if(current!==generation[side]||state[side]!==entry)return;entry.preview.data=data;entry.preview.loading=false;renderSide(side);updateButtons()}catch(error){if(current!==generation[side]||state[side]!==entry)return;console.warn(error);entry.preview.loading=false;entry.preview.error=String(error?.message||error);renderSide(side);updateButtons()}}
+    function nullabilityDiff(before,after){if(before.source==='declared'&&after.source==='declared')return before.repetition!==after.repetition;if(before.source==='inferred'&&after.source==='inferred')return !!before.observedNull!==!!after.observedNull||!!before.observedMissing!==!!after.observedMissing;const declared=before.source==='declared'?before:after,inferred=before.source==='inferred'?before:after;return declared?.repetition==='REQUIRED'&&!!(inferred?.observedNull||inferred?.observedMissing)}function compareFieldDetails(before,after,{renamed=false,crossFormat=false}={}){const changes=[];if(renamed)changes.push('renamed');if(before.structureSignature!==after.structureSignature)changes.push('structure');const typeBefore=crossFormat?before.normalizedSignature:before.typeSignature,typeAfter=crossFormat?after.normalizedSignature:after.typeSignature;if(typeBefore!==typeAfter&&before.structureSignature===after.structureSignature)changes.push('type');if(nullabilityDiff(before,after))changes.push('nullability');if(before.decimal&&after.decimal&&before.decimalSignature!==after.decimalSignature)changes.push('decimal');if(before.source==='declared'&&after.source==='declared'&&before.fieldId!==after.fieldId)changes.push('fieldId');return changes}
+    function uniqueFieldIdMap(fields){const counts=new Map();for(const field of fields){if(field.fieldId===null||field.fieldId===undefined)continue;counts.set(field.fieldId,(counts.get(field.fieldId)||0)+1)}const map=new Map();for(const field of fields){if(field.fieldId!==null&&field.fieldId!==undefined&&counts.get(field.fieldId)===1)map.set(field.fieldId,field)}return map}
+    function integerInfo(field){const l=field?.raw?.logical_type;if(l?.type==='INTEGER')return{signed:l.isSigned!==false,bits:Number(l.bitWidth||0)};const c=field?.raw?.converted_type;const m=/^(U?INT)_(8|16|32|64)$/.exec(c||'');if(m)return{signed:m[1]==='INT',bits:Number(m[2])};if(field?.raw?.type==='INT32')return{signed:true,bits:32};if(field?.raw?.type==='INT64')return{signed:true,bits:64};return null}
+    function floatBits(field){if(field?.raw?.type==='FLOAT')return 32;if(field?.raw?.type==='DOUBLE')return 64;return null}
+    function timestampSemanticChange(before,after){const b=before?.raw?.logical_type,a=after?.raw?.logical_type;return b?.type==='TIMESTAMP'&&a?.type==='TIMESTAMP'&&(b.unit!==a.unit||b.isAdjustedToUTC!==a.isAdjustedToUTC)}
+    function typeCompatibility(before,after){const bi=integerInfo(before),ai=integerInfo(after);if(bi&&ai&&bi.signed===ai.signed){if(ai.bits>bi.bits)return'widening';if(ai.bits<bi.bits)return'narrowing'}const bf=floatBits(before),af=floatBits(after);if(bf&&af){if(af>bf)return'widening';if(af<bf)return'narrowing'}return'other'}
+    const impactRank={none:0,info:1,compatible:2,review:3,breaking:4};
+    function compatibilityForRow(row){const candidates=[];const add=(level,reason)=>candidates.push({level,reason});const b=row.before,a=row.after,changes=row.changes||[];if(changes.length&&(row.comparisonHasInferred||b?.source==='inferred'||a?.source==='inferred'))return{level:'review',reason:'reasonInferred'};if(changes.includes('removed'))add('breaking','reasonRemoved');if(changes.includes('added'))add(a?.repetition==='REQUIRED'?'breaking':'compatible',a?.repetition==='REQUIRED'?'reasonRequiredAdded':'reasonOptionalAdded');if(changes.includes('renamed'))add('review','reasonRename');if(changes.includes('structure'))add('breaking','reasonStructure');if(changes.includes('nullability')){if(b?.repetition==='OPTIONAL'&&a?.repetition==='REQUIRED')add('breaking','reasonRequired');else if(b?.repetition==='REQUIRED'&&a?.repetition==='OPTIONAL')add('compatible','reasonNullable');else add('review','reasonTypeChange')}if(changes.includes('type')){if(timestampSemanticChange(b,a))add('review','reasonTimestampSemantics');else{const c=typeCompatibility(b,a);if(c==='widening')add('compatible','reasonWidening');else if(c==='narrowing')add('breaking','reasonNarrowing');else add('review','reasonTypeChange')}}if(changes.includes('decimal')){const bp=Number(b?.precision),ap=Number(a?.precision),bs=Number(b?.scale),as=Number(a?.scale);if(Number.isFinite(bp)&&Number.isFinite(ap)&&ap<bp)add('breaking','reasonDecimalPrecisionDown');if(Number.isFinite(bs)&&Number.isFinite(as)&&as!==bs)add('review','reasonDecimalScale');else if(Number.isFinite(bp)&&Number.isFinite(ap)&&ap>bp)add('compatible','reasonDecimalPrecisionUp')}if(changes.includes('fieldId'))add('review','reasonFieldId');if(!candidates.length)return{level:'none',reason:null};return candidates.sort((x,y)=>impactRank[y.level]-impactRank[x.level])[0]}
+    function diffSchemas(before,after){const useFieldIds=before.source==='declared'&&after.source==='declared',crossFormat=before.format!==after.format,comparisonHasInferred=before.source==='inferred'||after.source==='inferred',beforeId=useFieldIds?uniqueFieldIdMap(before.fields):new Map(),afterId=useFieldIds?uniqueFieldIdMap(after.fields):new Map(),afterPath=new Map(after.fields.map(f=>[f.path,f])),matchedAfter=new Set(),rows=[];for(const b of before.fields){let a=null,match='none';if(useFieldIds&&b.fieldId!==null&&b.fieldId!==undefined&&beforeId.get(b.fieldId)===b){const byId=afterId.get(b.fieldId);if(byId&&!matchedAfter.has(byId)){a=byId;match='fieldId'}}if(!a){const byPath=afterPath.get(b.path);if(byPath&&!matchedAfter.has(byPath)){a=byPath;match='path'}}if(!a){const row={path:b.path,beforePath:b.path,afterPath:null,before:b,after:null,changes:['removed'],depth:b.depth,match:'none',comparisonHasInferred};row.impact=compatibilityForRow(row);rows.push(row);continue}matchedAfter.add(a);const renamed=b.path!==a.path&&match==='fieldId',row={path:renamed?a.path:b.path,beforePath:b.path,afterPath:a.path,before:b,after:a,changes:compareFieldDetails(b,a,{renamed,crossFormat}),depth:Math.min(b.depth,a.depth),match,comparisonHasInferred};row.impact=compatibilityForRow(row);rows.push(row)}for(const a of after.fields){if(matchedAfter.has(a))continue;const row={path:a.path,beforePath:null,afterPath:a.path,before:null,after:a,changes:['added'],depth:a.depth,match:'none',comparisonHasInferred};row.impact=compatibilityForRow(row);rows.push(row)}const summary={fields:rows.length,added:rows.filter(r=>r.changes.includes('added')).length,removed:rows.filter(r=>r.changes.includes('removed')).length,modified:rows.filter(r=>r.changes.length&&!r.changes.includes('added')&&!r.changes.includes('removed')).length,renamed:rows.filter(r=>r.changes.includes('renamed')).length};summary.changed=summary.added+summary.removed+summary.modified;summary.impacts={breaking:rows.filter(r=>r.impact.level==='breaking').length,review:rows.filter(r=>r.impact.level==='review').length,compatible:rows.filter(r=>r.impact.level==='compatible').length,info:rows.filter(r=>r.impact.level==='info').length};return{before,after,rows,summary,crossFormat}}
+
+
+    function dropMarkup(){return `<svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M5 13v6h14v-6"/></svg><div class="drop-title">${escapeHtml(t('dropTitle'))}</div><div class="drop-hint">${escapeHtml(t('dropHint'))}</div><button class="button choose-button" type="button" data-choose="1">${escapeHtml(t('chooseFile'))}</button>`}
+    function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+    function delimiterLabel(value){if(value==='\t')return'TAB';if(value===' ')return'SPACE';return value||'?'}
+    function sourceBadge(schema){const inferred=schema.source==='inferred';return `<span class="format-badge ${inferred?'inferred':''}">${escapeHtml(schema.format.toUpperCase())} · ${escapeHtml(t(inferred?'formatInferred':'formatDeclared'))}</span>`}
+    function renderSide(side){
+      const box=$(`#${side}Content`),drop=$(`#${side}Drop`),status=$(`#${side}Status`),entry=state[side];
+      drop.classList.toggle('ready',!!entry?.schema);drop.classList.toggle('error',entry?.error===true);
+      if(!entry){box.innerHTML=dropMarkup();status.className='status-line';status.innerHTML=`<span class="status-dot"></span><span>${escapeHtml(t('waitingFile'))}</span>`;return}
+      if(entry.loading){box.innerHTML=`<svg class="drop-icon loading-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8" opacity=".25"/><path d="M20 12a8 8 0 0 0-8-8"/></svg><div class="drop-title">${escapeHtml(entry.file.name)}</div><div class="drop-hint">${escapeHtml(t('loading'))}</div>`;status.className='status-line';status.innerHTML=`<span class="status-dot"></span><span>${escapeHtml(t('loading'))}</span>`;return}
+      if(entry.error){box.innerHTML=`<svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3 2.8 20h18.4z"/><path d="M12 9v4m0 3h.01"/></svg><div class="drop-title">${escapeHtml(entry.file.name)}</div><div class="drop-hint">${escapeHtml(entry.unsupported?t('unsupported'):t('invalid'))}</div><button class="button choose-button" type="button" data-choose="1">${escapeHtml(t('chooseFile'))}</button>`;status.className='status-line error';status.innerHTML=`<span class="status-dot"></span><span>${escapeHtml(entry.unsupported?t('unsupported'):t('invalid'))}</span>`;return}
+      const sc=entry.schema,m=sc.metadata,meta=[formatBytes(entry.file.size),sourceBadge(sc)];
+      if(sc.source==='declared') {
+        meta.push(escapeHtml(t('rows',{count:formatNumber(m.num_rows)})));
+        meta.push(escapeHtml(t('fields',{count:formatNumber(sc.fields.length)})));
+        meta.push(escapeHtml(t('metadataReadBytes',{size:formatBytes(sc.tracker.bytes)})));
+      } else {
+        meta.push(escapeHtml(t('sampledRows',{count:formatNumber(m.sampled_rows)})));
+        meta.push(escapeHtml(t('fields',{count:formatNumber(sc.fields.length)})));
+        if(sc.format==='csv'||sc.format==='tsv') {
+          meta.push(escapeHtml(t('delimiter',{value:delimiterLabel(m.delimiter)})));
+          meta.push(escapeHtml(t(m.has_header?'headerDetected':'headerNotDetected')));
+          if(m.column_mismatch) meta.push(escapeHtml(t('columnMismatch',{count:formatNumber(m.column_mismatch)})));
+        }
+        meta.push(escapeHtml(t('readBytes',{size:formatBytes(sc.tracker.bytes)})));
+      }
+      const pv=entry.preview||{open:false},previewLabel=pv.open?t('hidePreview'):t('previewRows');
+      box.innerHTML=`<div class="file-card"><div class="file-card-head"><svg class="file-schema-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5M10 12h5M10 16h5"/></svg><div class="file-card-copy"><div class="file-name" title="${escapeHtml(entry.file.name)}">${escapeHtml(entry.file.name)}</div><div class="file-meta">${meta.map(x=>`<span>${x}</span>`).join('')}</div></div></div><div class="file-card-actions"><button class="button preview-toggle" type="button" data-preview-toggle="${side}" aria-expanded="${pv.open?'true':'false'}" aria-controls="${side}Preview">${escapeHtml(previewLabel)}</button><button class="button choose-button" type="button" data-choose="1">${escapeHtml(t('replaceFile'))}</button></div>${previewMarkup(side,entry)}</div>`;
+      status.className='status-line ready';status.innerHTML=`<span class="status-dot"></span><span>${escapeHtml(t('ready'))}</span>`;
+    }
+    function comparable(){return !!state.before?.schema&&!!state.after?.schema}
+    function pendingState(){const b=state.before,a=state.after;if(b?.loading||a?.loading)return'loading';if(b?.error||a?.error)return'error';if(b?.schema&&a?.schema)return'ready';if(b?.schema)return'needAfter';if(a?.schema)return'needBefore';return'needBoth'}
+    function pendingCopy(kind){return{loading:['emptyLoadingTitle','emptyLoadingBody'],error:['emptyErrorTitle','emptyErrorBody'],ready:['emptyReadyTitle','emptyReadyBody'],needBefore:['emptyNeedBeforeTitle','emptyNeedBeforeBody'],needAfter:['emptyNeedAfterTitle','emptyNeedAfterBody'],needBoth:['emptyTitle','emptyBody']}[kind]||['emptyTitle','emptyBody']}
+    function pendingIcon(kind){if(kind==='ready')return'<path d=\"M5 12.5 9.2 17 19 7\"/>';if(kind==='error')return'<path d=\"M12 3 2.8 20h18.4z\"/><path d=\"M12 9v4m0 3h.01\"/>';if(kind==='loading')return'<circle cx=\"12\" cy=\"12\" r=\"8\" opacity=\".25\"/><path d=\"M20 12a8 8 0 0 0-8-8\"/>';return'<path d=\"M8 3h8l4 4v14H8z\"/><path d=\"M16 3v5h5M4 7v14h4M11 12h6M11 16h6\"/>'}
+    function renderPendingResults(){if(lastDiff)return;const kind=pendingState(),copy=pendingCopy(kind);$('#reportToolbar').hidden=true;$('#resultsSub').textContent=t(copy[1]);$('#resultsBody').innerHTML=`<div class=\"empty-state\"><svg ${kind==='loading'?'class=\"loading-spinner\"':''} viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">${pendingIcon(kind)}</svg><h3>${escapeHtml(t(copy[0]))}</h3><p>${escapeHtml(t(copy[1]))}</p></div>`}
+    function updateButtons(){const ready=comparable(),kind=pendingState();$('#compareButton').disabled=!ready;$('#mobileCompareButton').disabled=!ready;$('#swapButton').disabled=!(state.before||state.after);const readiness=$('#compareReadiness');readiness.className=`compare-readiness ${kind==='ready'?'ready':kind==='error'?'error':''}`;readiness.textContent=t({ready:'compareReady',loading:'compareLoading',error:'compareFixError',needBefore:'compareNeedBefore',needAfter:'compareNeedAfter',needBoth:'compareNeedBoth'}[kind]);const previewOpen=!!state.before?.preview?.open||!!state.after?.preview?.open,showMobile=ready&&!lastDiff&&!previewOpen;$('#mobileCompareBar').hidden=!showMobile;document.body.classList.toggle('mobile-action-visible',showMobile);if(!lastDiff)renderPendingResults()}
+    async function setFile(side,file){if(!file)return;const current=++generation[side];state[side]={file,loading:true};lastDiff=null;renderSide(side);updateButtons();resetResults();try{const format=fileFormat(file);if(!format)throw Object.assign(new Error('unsupported file format'),{unsupported:true});const schema=await readSchema(file);if(current!==generation[side])return;state[side]={file,schema,preview:{open:false,loading:false,data:null,error:null}};renderSide(side)}catch(error){if(current!==generation[side])return;console.warn(error);state[side]={file,error:true,unsupported:!!error?.unsupported,message:String(error?.message||error)};renderSide(side);showToast(t('loadErrorToast'),'error')}updateButtons()}
+    function resetResults(){lastDiff=null;$('#reportToolbar').hidden=true;$('#fieldSearch').value='';$('#diffFilter').value='all';reportView.query='';reportView.filter='all';renderPendingResults()}
+    let lastDiff=null;const reportView={filter:'all',query:''};
+    function pill(change){const map={added:['change-added','added'],removed:['change-removed','removed'],type:['change-type','typeChanged'],nullability:['change-nullability','nullabilityChanged'],decimal:['change-decimal','decimalChanged'],structure:['change-structure','structureChanged'],fieldId:['change-fieldid','fieldIdChanged'],renamed:['change-renamed','renamed'],same:['change-same','unchanged']},[cls,key]=map[change]||map.same;return `<span class="change-pill ${cls}">${escapeHtml(t(key))}</span>`}
+    function pills(changes){const list=changes?.length?changes:['same'];return `<span class="change-list">${list.map(pill).join('')}</span>`}
+    function schemaCell(field,showNormalized=false){if(!field)return `<span class="missing">${escapeHtml(t('missing'))}</span>`;const items=fieldMeta(field);if(showNormalized)items.unshift(t('normalizedType',{type:field.normalizedType||field.type}));const meta=items.map(item=>`<span>${escapeHtml(item)}</span>`).join('');return `<span class="schema-type-main">${escapeHtml(field.type)}</span>${meta?`<span class="schema-meta">${meta}</span>`:''}`}
+    function fieldPathText(row){return row.beforePath&&row.afterPath&&row.beforePath!==row.afterPath?`${row.beforePath} → ${row.afterPath}`:(row.path||row.beforePath||row.afterPath||'')}
+    function fieldPathCell(row){const text=fieldPathText(row);return `<span class="field-path ${row.depth>0?'nested':''}" style="--depth:${Math.min(row.depth,5)}"><span class="field-path-text">${escapeHtml(text)}</span></span>`}
+    function impactKey(level){return {breaking:'impactBreaking',review:'impactReview',compatible:'impactCompatible',info:'impactInfo',none:'impactNone'}[level]||'impactNone'}
+    function impactBadge(impact){const level=impact?.level||'none';return `<span class="impact-badge impact-${level}">${escapeHtml(t(impactKey(level)))}</span>`}
+    function impactDetail(row){return `<div class="impact-detail">${impactBadge(row.impact)}${row.impact?.reason?`<span class="impact-reason">${escapeHtml(t(row.impact.reason))}</span>`:''}${pills(row.changes)}</div>`}
+    function rowMatchesView(row){const q=reportView.query.trim().toLocaleLowerCase();if(q){const hay=[row.path,row.beforePath,row.afterPath].filter(Boolean).join('\n').toLocaleLowerCase();if(!hay.includes(q))return false}switch(reportView.filter){case'changed':return !!row.changes?.length;case'added':return row.changes?.includes('added');case'removed':return row.changes?.includes('removed');case'type':return row.changes?.includes('type');case'breaking':return row.impact?.level==='breaking';case'review':return row.impact?.level==='review';default:return true}}
+    function renderVisibleRows(){if(!lastDiff)return;const rows=lastDiff.rows.filter(rowMatchesView),crossFormat=!!lastDiff.crossFormat,total=lastDiff.rows.length;$('#visibleCount').textContent=t('visibleCount',{visible:formatNumber(rows.length),total:formatNumber(total)});const host=$('#resultRows');if(!host)return;if(!rows.length){host.innerHTML=`<div class="filter-empty"><strong>${escapeHtml(t('filterEmptyTitle'))}</strong><span>${escapeHtml(t('filterEmptyBody'))}</span></div>`;return}const tableRows=rows.map(r=>`<tr><td class="field-cell">${fieldPathCell(r)}</td><td class="type-cell">${schemaCell(r.before,crossFormat)}</td><td class="type-cell">${schemaCell(r.after,crossFormat)}</td><td>${impactDetail(r)}</td></tr>`).join(''),mobileRows=rows.map(r=>`<article class="mobile-diff"><div class="mobile-diff-top"><span class="mobile-field">${fieldPathCell(r)}</span>${impactBadge(r.impact)}</div><div class="mobile-types"><div class="mobile-type-box"><span class="mobile-type-label">Before</span><span class="mobile-type-value">${schemaCell(r.before,crossFormat)}</span></div><span class="arrow">→</span><div class="mobile-type-box"><span class="mobile-type-label">After</span><span class="mobile-type-value">${schemaCell(r.after,crossFormat)}</span></div></div><div class="impact-detail">${r.impact?.reason?`<span class="impact-reason">${escapeHtml(t(r.impact.reason))}</span>`:''}${pills(r.changes)}</div></article>`).join('');host.innerHTML=`<div class="table-wrap"><table class="diff-table"><thead><tr><th style="width:26%">${escapeHtml(t('field'))}</th><th style="width:23%">Before</th><th style="width:23%">After</th><th style="width:28%">${escapeHtml(t('impactSummaryTitle'))}</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="mobile-diffs">${mobileRows}</div>`}
+    function renderResults(diff){lastDiff=diff;$('#reportToolbar').hidden=false;const {summary}=diff,crossFormat=!!diff.crossFormat,baseSub=summary.changed===0?t('sameBody'):t('changedCount',{count:formatNumber(summary.changed)});$('#resultsSub').textContent=crossFormat?`${baseSub} · ${t('normalizedComparison',{before:diff.before.format.toUpperCase(),after:diff.after.format.toUpperCase()})}`:baseSub;const summaryHtml=`<div class="summary"><div class="summary-card"><span class="summary-value">${formatNumber(summary.fields)}</span><span class="summary-label">${escapeHtml(t('summaryAll'))}</span></div><div class="summary-card"><span class="summary-value">${formatNumber(summary.added)}</span><span class="summary-label">${escapeHtml(t('summaryAdded'))}</span></div><div class="summary-card"><span class="summary-value">${formatNumber(summary.removed)}</span><span class="summary-label">${escapeHtml(t('summaryRemoved'))}</span></div><div class="summary-card"><span class="summary-value">${formatNumber(summary.modified)}</span><span class="summary-label">${escapeHtml(t('summaryModified'))}</span></div></div>`,impactHtml=summary.changed?`<div class="impact-summary" aria-label="${escapeHtml(t('impactSummaryTitle'))}"><div class="impact-card impact-breaking"><span class="impact-value">${formatNumber(summary.impacts.breaking)}</span><span class="impact-label">${escapeHtml(t('impactBreaking'))}</span></div><div class="impact-card impact-review"><span class="impact-value">${formatNumber(summary.impacts.review)}</span><span class="impact-label">${escapeHtml(t('impactReview'))}</span></div><div class="impact-card impact-compatible"><span class="impact-value">${formatNumber(summary.impacts.compatible)}</span><span class="impact-label">${escapeHtml(t('impactCompatible'))}</span></div><div class="impact-card impact-info"><span class="impact-value">${formatNumber(summary.impacts.info)}</span><span class="impact-label">${escapeHtml(t('impactInfo'))}</span></div></div>`:'';if(summary.changed===0){reportView.filter='all';reportView.query=''}$('#diffFilter').value=reportView.filter;$('#fieldSearch').value=reportView.query;$('#diffFilter').disabled=summary.changed===0;$('#fieldSearch').disabled=summary.changed===0;if(summary.changed===0){$('#visibleCount').textContent=t('fields',{count:formatNumber(summary.fields)});$('#resultsBody').innerHTML=summaryHtml+`<div class="empty-state"><h3>${escapeHtml(t('sameTitle'))}</h3><p>${escapeHtml(t('sameBody'))}</p></div>`;updateButtons();return}$('#resultsBody').innerHTML=summaryHtml+impactHtml+`<div id="resultRows"></div>`;renderVisibleRows();updateButtons()}
+    function markdownEscape(value){return String(value??'').replaceAll('\\','\\\\').replaceAll('|','\\|').replace(/\r?\n/g,' ')}
+    function fieldReportText(field,crossFormat=false){if(!field)return '—';const parts=[field.type];if(crossFormat&&field.normalizedType&&field.normalizedType!==field.type)parts.push(`normalized: ${field.normalizedType}`);if(field.source==='declared'){if(field.repetition)parts.push(field.repetition);if(field.fieldId!==null&&field.fieldId!==undefined)parts.push(`Field ID: ${field.fieldId}`);if(field.decimal)parts.push(`p=${field.precision??'?'}, s=${field.scale??'?'}`)}else{parts.push('inferred');parts.push(field.observedNull?'NULL observed':'no NULL observed');if(field.missingTracked)parts.push(field.observedMissing?'missing observed':'no missing observed')}return parts.join(' · ')}
+    function changedRows(diff){return diff.rows.filter(r=>r.changes?.length)}
+    function buildMarkdownReport(diff){const rows=changedRows(diff),s=diff.summary,beforeName=state.before?.file?.name||'Before',afterName=state.after?.file?.name||'After',lines=[`# Schema Diff`,``,`${t('reportGenerated')} · v${APP_CONFIG.version}`,``,`- Before: \`${markdownEscape(beforeName)}\` (${diff.before.format.toUpperCase()}, ${diff.before.source})`,`- After: \`${markdownEscape(afterName)}\` (${diff.after.format.toUpperCase()}, ${diff.after.source})`,``,`## ${t('reportSummary')}`,``,`| ${t('summaryAll')} | ${t('summaryAdded')} | ${t('summaryRemoved')} | ${t('summaryModified')} | ${t('impactBreaking')} | ${t('impactReview')} |`,`| ---: | ---: | ---: | ---: | ---: | ---: |`,`| ${s.fields} | ${s.added} | ${s.removed} | ${s.modified} | ${s.impacts.breaking} | ${s.impacts.review} |`,``,`## ${t('reportChanges')}`,``];if(!rows.length){lines.push(t('reportNoChanges'));return lines.join('\n')}lines.push(`| ${t('field')} | Before | After | ${t('impactSummaryTitle')} | ${t('change')} |`,`| --- | --- | --- | --- | --- |`);for(const row of rows){const impact=t(impactKey(row.impact?.level||'none')),reason=row.impact?.reason?t(row.impact.reason):'',change=(row.changes||[]).map(c=>t({added:'added',removed:'removed',type:'typeChanged',nullability:'nullabilityChanged',decimal:'decimalChanged',structure:'structureChanged',fieldId:'fieldIdChanged',renamed:'renamed'}[c]||'unchanged')).join(', ');lines.push(`| ${markdownEscape(fieldPathText(row))} | ${markdownEscape(fieldReportText(row.before,diff.crossFormat))} | ${markdownEscape(fieldReportText(row.after,diff.crossFormat))} | ${markdownEscape(reason?`${impact}: ${reason}`:impact)} | ${markdownEscape(change)} |`)}return lines.join('\n')}
+    function primitiveField(field){if(!field)return null;return{path:field.path,type:field.type,normalizedType:field.normalizedType??field.type,kind:field.kind??null,source:field.source,repetition:field.repetition??null,nullable:field.nullable??null,observedNull:field.observedNull??null,observedMissing:field.observedMissing??null,fieldId:typeof field.fieldId==='bigint'?field.fieldId.toString():field.fieldId??null,precision:field.precision??null,scale:field.scale??null,logical:field.logical??null,physical:field.physical??null}}
+    function sourceReport(side,diffSide){const entry=state[side],schema=diffSide,meta=schema.metadata||{};return{fileName:entry?.file?.name??null,fileSize:entry?.file?.size??null,format:schema.format,schemaSource:schema.source,rows:typeof meta.num_rows==='bigint'?meta.num_rows.toString():meta.num_rows??null,sampledRows:meta.sampled_rows??null,complete:meta.complete??null,bytesRead:schema.tracker?.bytes??null}}
+    function buildJsonReport(diff){return{schemaVersion:1,app:{name:'Schema Diff',version:APP_CONFIG.version},generatedAt:new Date().toISOString(),before:sourceReport('before',diff.before),after:sourceReport('after',diff.after),crossFormat:diff.crossFormat,summary:diff.summary,fields:diff.rows.map(row=>({path:row.path,beforePath:row.beforePath,afterPath:row.afterPath,match:row.match,changes:[...(row.changes||[])],impact:{level:row.impact?.level||'none',label:t(impactKey(row.impact?.level||'none')),reasonCode:row.impact?.reason??null,reason:row.impact?.reason?t(row.impact.reason):null},before:primitiveField(row.before),after:primitiveField(row.after)}))}}
+    function safeStem(name){return String(name||'').replace(/\.[^.]+$/,'').normalize('NFKC').replace(/[<>:"/\\|?*\x00-\x1f]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^[-. ]+|[-. ]+$/g,'').slice(0,44)||'schema'}
+    function outputFilename(ext){const before=safeStem(state.before?.file?.name||'before'),after=safeStem(state.after?.file?.name||'after');return `${before}-to-${after}-schema-diff.${ext}`}
+    function downloadText(filename,text,mime){const url=URL.createObjectURL(new Blob([text],{type:mime})),a=document.createElement('a');a.href=url;a.download=filename;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0)}
+    async function copyText(text){try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true}}catch{}const area=document.createElement('textarea');area.value=text;area.setAttribute('readonly','');area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();let ok=false;try{ok=document.execCommand('copy')}catch{}area.remove();return ok}
+
+
+
+    for(const side of ['before','after']){const drop=$(`#${side}Drop`),input=$(`#${side}Input`);drop.addEventListener('click',e=>{const toggle=e.target.closest('[data-preview-toggle]'),retry=e.target.closest('[data-preview-retry]');if(toggle){e.stopPropagation();togglePreview(side);return}if(retry){e.stopPropagation();togglePreview(side,{retry:true});return}if(e.target.closest('[data-choose]')||e.target===drop||!state[side])input.click()});drop.addEventListener('keydown',e=>{if(e.target.closest('button'))return;if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});input.addEventListener('change',()=>setFile(side,input.files?.[0]));for(const type of ['dragenter','dragover'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.add('drag')});for(const type of ['dragleave','drop'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.remove('drag')});drop.addEventListener('drop',e=>setFile(side,e.dataTransfer?.files?.[0]))}
+    function runCompare(){if(!comparable())return;renderResults(diffSchemas(state.before.schema,state.after.schema));showToast(t('compareDone'));const reduce=matchMedia?.('(prefers-reduced-motion: reduce)').matches;$('#resultsTitle').scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'})}
+    $('#compareButton').addEventListener('click',runCompare);
+    $('#mobileCompareButton').addEventListener('click',runCompare);
+    $('#swapButton').addEventListener('click',()=>{const hadResult=!!lastDiff,b=state.before,a=state.after;state.before=a;state.after=b;generation.before++;generation.after++;renderSide('before');renderSide('after');updateButtons();if(hadResult&&comparable()){renderResults(diffSchemas(state.before.schema,state.after.schema));showToast(t('swappedCompared'))}else resetResults()});
+    $('#fieldSearch').addEventListener('input',e=>{reportView.query=e.target.value;renderVisibleRows()});
+    $('#diffFilter').addEventListener('change',e=>{reportView.filter=e.target.value;renderVisibleRows()});
+    $('#copyResultButton').addEventListener('click',async()=>{if(!lastDiff)return;const ok=await copyText(buildMarkdownReport(lastDiff));showToast(t(ok?'copyDone':'copyFailed'),ok?'success':'error')});
+    $('#saveMarkdownButton').addEventListener('click',()=>{if(!lastDiff)return;downloadText(outputFilename('md'),buildMarkdownReport(lastDiff),'text/markdown;charset=utf-8');showToast(t('markdownSaved'),'success')});
+    $('#saveJsonButton').addEventListener('click',()=>{if(!lastDiff)return;downloadText(outputFilename('json'),JSON.stringify(buildJsonReport(lastDiff),null,2)+'\n','application/json;charset=utf-8');showToast(t('jsonSaved'),'success')});
+    async function reloadInferred(filter='all'){const files=[];for(const side of ['before','after']){const sc=state[side]?.schema;if(sc?.source!=='inferred')continue;if(filter==='delimited'&&!(sc.format==='csv'||sc.format==='tsv'))continue;files.push([side,state[side].file])}for(const [side,file] of files)await setFile(side,file);if(files.length)showToast(t('settingsReloaded'))}
+    $('#sampleRowsSelect').addEventListener('change',async e=>{inferenceSettings.sampleRows=e.target.value==='all'?'all':Number(e.target.value);await reloadInferred('all')});
+    $('#headerModeSelect').addEventListener('change',async e=>{inferenceSettings.headerMode=e.target.value;await reloadInferred('delimited')});
+    $('#languageButton').addEventListener('click',()=>{language=language==='ja'?'en':'ja';try{localStorage.setItem(`${APP_CONFIG.slug}:language`,language)}catch{}applyLanguage()});
+    const help=$('#helpDialog');$('#helpButton').addEventListener('click',()=>help.showModal());$('#closeHelpButton').addEventListener('click',()=>help.close());help.addEventListener('click',e=>{const r=help.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)help.close()});
+    $('#buildVersion').textContent=`v${APP_CONFIG.version}`;$('#versionBadge').textContent=`v${APP_CONFIG.version}`;$('#builtAt').textContent=BUILD_MANIFEST.generatedAtUtc?new Date(BUILD_MANIFEST.generatedAtUtc).toLocaleString(): '—';applyLanguage();updateButtons();
+  })();
+  </script>
+</body>
+</html>
