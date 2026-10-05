@@ -164,6 +164,8 @@ JSON export uses `schemaVersion = 1` and contains:
 
 Export filenames derive from the Before / After source filenames. Unsafe path/filename characters must be removed and long stems truncated. Generated report files are local Blob downloads and require no network access.
 
+Swap is disabled and its action is guarded while either side has an in-flight schema or preview read, even if the preview is closed. Reopening a pending preview reuses that read. Success or failure restores availability; source replacement invalidates obsolete completions. A cancelled file picker preserves the current source.
+
 When Before / After are swapped after an existing comparison, the app recomputes the diff immediately instead of returning to the empty result state.
 
 ## Declared vs inferred schema contract
@@ -249,7 +251,7 @@ Column merging:
 - Integer + FLOAT64 -> FLOAT64.
 - Incompatible mixed types -> STRING.
 
-Header names must be non-empty and unique in the normalized schema. Blank or duplicate names receive deterministic generated/suffixed names.
+Header names must be non-empty and unique in the normalized schema. Blank or duplicate names receive deterministic generated/suffixed names. Reserve all normalized, nonempty explicit header names before assigning generated names or suffixes, even if the explicit name occurs later. Preserve every column and its preview value, including literal names such as `__proto__`. Identical inputs must compare with zero changes; real changes must retain their own unique field identity.
 
 ## Format comparison contract in v0.7.0
 

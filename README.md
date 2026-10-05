@@ -80,7 +80,11 @@ The result view can show:
 
 Search and filters affect only the screen. Copy, Markdown export, and JSON export always use the complete comparison result.
 
+Duplicate or blank CSV / TSV headers receive deterministic unique names. Explicit column names are reserved first, so `value,value,value_2` becomes `value,value_3,value_2` and every preview cell is retained. Use the manual header setting when automatic detection does not identify a header.
+
 ### Before / After swap
+
+Swap becomes available after any schema or preview read finishes, including when you close a loading preview. Reopening that preview reuses its pending read.
 
 If a comparison is already displayed, swapping Before and After immediately recomputes the comparison in the reverse direction.
 
@@ -184,6 +188,8 @@ Build the release artifacts with:
 ```powershell
 .\build-standalone.bat
 ```
+
+Use Node.js 22 or newer for the dependency-free runtime regressions. After changing source, build and refresh the tracked download alias with `Copy-Item dist/index.html schema-diff.html`, then run `scripts/check-repository.ps1`. The check rejects a stale alias (ignoring only its build timestamp) and tests the source, readable HTML, alias, and restored self-extract payload.
 
 The repository verification scripts check the template contract, CSP/runtime-network protection, generated standalone HTML, self-extract integrity, placeholders, and build-size reports.
 
