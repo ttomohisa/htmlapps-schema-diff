@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Add a Japanese / English Renamed display filter that intersects field-path search while preserving full Markdown / JSON exports and existing unique-Field-ID matching.
+- Fix Parquet logical INTEGER normalization to preserve all eight signed / unsigned widths instead of reading attributes from the type-name string; keep conservative cross-format differences.
+- Add synthetic Parquet metadata fixtures and native parser, localized rendering, full-export, and integer normalization regressions across all generated variants.
+
 - Preserve every CSV / TSV column with deterministic collision-free header names, reserving explicit suffix names before generated names. Literal prototype-like names also retain their preview values.
 - Disable and guard Before / After swap while schema or preview reads are pending; reopening a pending preview reuses its read. Completed swaps, error recovery, replacement guards, and reversed comparisons remain available.
 - Add native-File parser, preview, report, format-fixture, and lifecycle regressions to repository verification, plus tracked download alias and self-extract parity checks.

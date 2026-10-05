@@ -260,7 +260,7 @@ test('JA/EN full reports stay complete under search and filters', async () => {
   c.state.before = { file: csv('', 'before.csv'), schema: before }; c.state.after = { file: csv('', 'after.csv'), schema: after };
   for (const language of ['ja', 'en']) {
     c.language = language;
-    for (const filter of ['all', 'changed', 'added', 'removed', 'type', 'breaking', 'review']) {
+    for (const filter of ['all', 'changed', 'added', 'removed', 'renamed', 'type', 'breaking', 'review']) {
       c.reportView.filter = filter; c.reportView.query = 'no-match';
       assert.equal(diff.rows.filter(c.rowMatchesView).length, 0);
       const json = c.buildJsonReport(diff), markdown = c.buildMarkdownReport(diff);
@@ -270,4 +270,131 @@ test('JA/EN full reports stay complete under search and filters', async () => {
   }
   assert.equal(JSON.stringify(diff), original);
   assert.equal(c.outputFilename('json'), 'before-to-after-schema-diff.json');
+});
+
+function enableResultControls(c) {
+  // Real renderers and event callbacks; only DOM sinks / clipboard / downloads are stubbed.
+  vm.runInContext(section('    function pill(', '    function markdownEscape(') +
+    section("    $('#fieldSearch').addEventListener", '    async function reloadInferred('), c);
+}
+const snapshot = value => JSON.stringify(value, (_, v) => typeof v === 'bigint' ? v.toString() : v);
+async function renameComparison(c) {
+  const beforeFile = c.fixture('rename-filter-before.parquet'), afterFile = c.fixture('rename-filter-after.parquet');
+  const before = await c.readSchema(beforeFile), after = await c.readSchema(afterFile);
+  c.state.before = { file: beforeFile, schema: before }; c.state.after = { file: afterFile, schema: after };
+  return c.diffSchemas(before, after);
+}
+
+test('Renamed filter has Japanese / English labels and help in the native select', () => {
+  const select = html.match(/<select[^>]*id="diffFilter"[^>]*>([\s\S]*?)<\/select>/)[1];
+  assert.match(select, /<option value="renamed" data-i18n="filterRenamed">名前変更<\/option>/);
+  const c = runtime();
+  for (const [language, label] of [['ja', '名前変更'], ['en', 'Renamed']]) {
+    c.language = language; assert.equal(c.t('filterRenamed'), label);
+    assert.match(c.t('helpRenamed'), /Field ID/);
+  }
+  assert.match(section('<!-- APP:HELP:BEGIN', '<!-- APP:HELP:END'), /data-i18n="helpRenamed"/);
+});
+
+test('Renamed intersects old/new path search and includes combined changes only', async () => {
+  const c = runtime(), diff = await renameComparison(c), original = snapshot(diff);
+  assert.equal(diff.summary.fields, 4); assert.equal(diff.summary.renamed, 1);
+  const renamed = diff.rows.find(row => row.changes.includes('renamed'));
+  assert.deepEqual(plain(renamed.changes).sort(), ['nullability', 'renamed', 'type']);
+  c.reportView.filter = 'renamed';
+  assert.deepEqual(plain(diff.rows.filter(c.rowMatchesView).map(row => row.afterPath)), ['new_name']);
+  for (const query of ['old_name', 'new_name', '  OLD_NAME  ', 'NEW_NAME']) {
+    c.reportView.query = query; assert.equal(diff.rows.filter(c.rowMatchesView).length, 1, query);
+  }
+  for (const query of ['stable', 'added', 'removed', 'no-match']) {
+    c.reportView.query = query; assert.equal(diff.rows.filter(c.rowMatchesView).length, 0, query);
+  }
+  c.reportView.query = ''; c.reportView.filter = 'changed'; assert.equal(diff.rows.filter(c.rowMatchesView).length, 3);
+  c.reportView.filter = 'type'; assert.equal(diff.rows.filter(c.rowMatchesView).length, 1);
+  c.reportView.filter = 'all'; assert.equal(diff.rows.filter(c.rowMatchesView).length, 4);
+  assert.equal(snapshot(diff), original);
+});
+
+test('Renamed never guesses from duplicate IDs, missing IDs or inferred paths', async () => {
+  const c = runtime(); c.reportView.filter = 'renamed';
+  for (const [before, after] of [
+    [await c.readSchema(c.fixture('duplicate-id-before.parquet')), await c.readSchema(c.fixture('duplicate-id-after.parquet'))],
+    [await c.readSchema(c.fixture('before.parquet')), await c.readSchema(c.fixture('after.parquet'))],
+    [await c.readSchema(csv('old_name\n1\n')), await c.readSchema(csv('new_name\n1\n'))],
+    [await c.readSchema(c.fixture('rename-filter-before.parquet')), await c.readSchema(csv('new_name,stable,added\n1,1,1\n'))]
+  ]) {
+    const diff = c.diffSchemas(before, after);
+    assert.equal(diff.summary.renamed, 0); assert.equal(diff.rows.filter(c.rowMatchesView).length, 0);
+    assert.ok(diff.rows.some(row => row.changes.includes('added')));
+    assert.ok(diff.rows.some(row => row.changes.includes('removed')));
+  }
+});
+
+for (const language of ['ja', 'en']) test(`${language}: Renamed UI renders counts, empty state, swap and full exports`, async () => {
+  const c = runtime(); c.language = language; enableResultControls(c);
+  const diff = await renameComparison(c), original = snapshot(diff), downloads = [];
+  c.copyText = async text => { c.copied = text; return true; };
+  c.downloadText = (filename, text, mime) => downloads.push({ filename, text, mime });
+  c.renderResults(diff);
+  const filter = value => c.elements.get('#diffFilter').change({ target: { value } });
+  const search = value => c.elements.get('#fieldSearch').input({ target: { value } });
+  filter('renamed');
+  assert.equal(c.elements.get('#visibleCount').textContent, c.t('visibleCount', { visible: '1', total: '4' }));
+  let rendered = c.elements.get('#resultRows').innerHTML;
+  assert.equal((rendered.match(/old_name → new_name/g) || []).length, 2, 'desktop and mobile output');
+  assert.doesNotMatch(rendered, /stable|>added<|>removed</);
+  search('no-match'); assert.match(c.elements.get('#resultRows').innerHTML, /filter-empty/);
+  assert.equal(c.elements.get('#visibleCount').textContent, c.t('visibleCount', { visible: '0', total: '4' }));
+  await c.elements.get('#copyResultButton').click();
+  c.elements.get('#saveMarkdownButton').click(); c.elements.get('#saveJsonButton').click();
+  assert.equal(c.copied, c.buildMarkdownReport(diff)); assert.equal(downloads[0].text, c.copied);
+  for (const field of ['old_name', 'new_name', 'added', 'removed']) assert.ok(c.copied.includes(field), field);
+  const json = JSON.parse(downloads[1].text);
+  assert.equal(json.schemaVersion, 1); assert.equal(json.fields.length, 4);
+  assert.deepEqual(json.summary, plain(diff.summary)); assert.ok(json.fields.some(row => row.path === 'stable'));
+  assert.equal(snapshot(diff), original);
+  search('old_name'); c.swap();
+  assert.equal(c.reportView.filter, 'renamed');
+  assert.equal(c.lastDiff.rows.find(row => row.changes.includes('renamed')).afterPath, 'old_name');
+  assert.match(c.elements.get('#resultRows').innerHTML, /new_name → old_name/);
+  filter('all'); search(''); assert.equal(c.lastDiff.rows.filter(c.rowMatchesView).length, 4);
+  c.renderResults(c.diffSchemas(c.state.before.schema, c.state.before.schema));
+  assert.equal(c.reportView.filter, 'all'); assert.equal(c.reportView.query, '');
+  assert.equal(c.elements.get('#diffFilter').disabled, true);
+  c.resetResults(); assert.equal(c.elements.get('#reportToolbar').hidden, true);
+});
+
+for (const bits of [8, 16, 32, 64]) for (const signed of [true, false]) {
+  const name = `${signed ? 'int' : 'uint'}${bits}`;
+  test(`logical ${name} retains decoded width/sign and matches converted normalization`, async () => {
+    const c = runtime(), logical = await c.readSchema(c.fixture('integer-logical.parquet'));
+    const converted = await c.readSchema(c.fixture('integer-converted.parquet'));
+    const field = logical.fields.find(f => f.path === name), legacy = converted.fields.find(f => f.path === name);
+    assert.deepEqual(plain(field.raw.logical_type), { type: 'INTEGER', bitWidth: bits, isSigned: signed });
+    assert.ok(field.type.includes(name.toUpperCase()));
+    assert.equal(field.normalizedType, name.toUpperCase());
+    assert.equal(field.normalizedType, legacy.normalizedType);
+    assert.equal(c.diffSchemas(logical, logical).summary.changed, 0);
+  });
+}
+
+for (const format of ['csv', 'tsv', 'jsonl', 'ndjson']) test(`${format}: integer normalization fixes equivalence and preserves conservative differences`, async () => {
+  const c = runtime(), declared = await c.readSchema(c.fixture('integer-logical.parquet'));
+  const values = Object.fromEntries(declared.fields.map(f => [f.path, f.path.endsWith('64') ? 2147483648 : 1]));
+  const delimiter = format === 'tsv' ? '\t' : ',';
+  const text = ['jsonl', 'ndjson'].includes(format) ? `${JSON.stringify(values)}\n` : `${Object.keys(values).join(delimiter)}\n${Object.values(values).join(delimiter)}\n`;
+  const inferred = await c.readSchema(csv(text, `integers.${format}`));
+  for (const [before, after] of [[declared, inferred], [inferred, declared]]) {
+    const diff = c.diffSchemas(before, after);
+    assert.equal(diff.summary.changed, 6);
+    for (const row of diff.rows) {
+      if (['int32', 'int64'].includes(row.path)) {
+        assert.deepEqual(plain(row.changes), []); assert.equal(row.impact.level, 'none');
+      } else {
+        assert.deepEqual(plain(row.changes), ['type']); assert.equal(row.impact.level, 'review');
+        assert.equal(row.impact.reason, 'reasonInferred');
+      }
+    }
+    assert.equal(c.buildJsonReport(diff).schemaVersion, 1);
+  }
 });
