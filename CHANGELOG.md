@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+- Preserve every CSV / TSV column with deterministic collision-free header names, reserving explicit suffix names before generated names. Literal prototype-like names also retain their preview values.
+- Disable and guard Before / After swap while schema or preview reads are pending; reopening a pending preview reuses its read. Completed swaps, error recovery, replacement guards, and reversed comparisons remain available.
+- Add native-File parser, preview, report, format-fixture, and lifecycle regressions to repository verification, plus tracked download alias and self-extract parity checks.
+
 ## [1.0.0] - 2026-09-08 - Formal release
 
 - Promoted the validated v0.9.0 release candidate to the formal v1.0.0 release without expanding the supported-format scope.

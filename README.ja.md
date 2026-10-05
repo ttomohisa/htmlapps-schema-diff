@@ -80,7 +80,11 @@ Schema Diffの `dependencies.json` には現在パッケージ依存を登録し
 
 検索とフィルターは**画面表示だけ**に適用されます。結果コピー、Markdown保存、JSON保存には常に比較結果全体を含めます。
 
+CSV / TSVの重複・空欄ヘッダーには一意の名前を割り当てます。明示された列名を先に確保するため、`value,value,value_2`は`value,value_3,value_2`となり、すべてのプレビュー値が保持されます。自動判定でヘッダーにならない場合は手動設定を利用してください。
+
 ### Before / After入れ替え
+
+スキーマやプレビューの読み込み中は入れ替えできません。読み込み中のプレビューを閉じても完了を待ち、再び開いた場合は同じ読み込みを利用します。
 
 比較済みの状態でBefore / Afterを入れ替えると、逆方向の比較を自動で再実行します。
 
@@ -230,3 +234,7 @@ GitHub Pages版ではアプリを開くための最初のHTML通信は発生し�
 Copyright © 2026 ttomohisa
 
 このプロジェクトは [MIT License](LICENSE) で公開されています。
+
+### 開発用の回帰テスト
+
+依存パッケージ不要の実行テストにはNode.js 22以降を使用します。ソース変更後はビルドして`Copy-Item dist/index.html schema-diff.html`で配布用HTMLを更新し、`scripts/check-repository.ps1`を実行してください。ビルド日時以外の配布用HTMLのずれを検出し、ソース・通常版・配布用HTML・自己展開版の復元内容を検証します。

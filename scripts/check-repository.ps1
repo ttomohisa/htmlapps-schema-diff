@@ -229,9 +229,17 @@ if ([string]::IsNullOrWhiteSpace([string]$app.name)) { throw "app.config.json: n
 if ([string]::IsNullOrWhiteSpace([string]$app.slug)) { throw "app.config.json: slug is required" }
 if ([string]::IsNullOrWhiteSpace([string]$app.version)) { throw "app.config.json: version is required" }
 
+# Native Node tests exercise actual runtime functions, including async ownership.
+$node = Get-Command node -ErrorAction Stop
+& $node.Source --test (Join-Path $Root "scripts/test-schema-diff.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Schema Diff runtime regression tests failed." }
+
 $buildArguments = @{}
 if ($ForceDownload) { $buildArguments.ForceDownload = $true }
 & (Join-Path $Root "build-standalone.ps1") @buildArguments
+& $node.Source (Join-Path $Root "scripts/test-release-parity.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Schema Diff release parity or generated runtime tests failed." }
+
 
 Write-Host "[OK] Repository check passed." -ForegroundColor Green
 
