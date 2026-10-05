@@ -142,9 +142,12 @@ Supported display filters:
 - changed only
 - added
 - removed
+- renamed (rows whose existing `changes` includes `renamed`)
 - type changes
 - `impact.level = breaking`
 - `impact.level = review`
+
+The Renamed / 名前変更 filter includes combined rename/type/nullability changes and intersects with the current field search. It does not infer new renames; only unique Field IDs on both declared Parquet sides can identify a rename.
 
 Field search matches normalized `path`, `beforePath`, or `afterPath`, including rename rows. No-match state must be explicit and must not replace the underlying comparison.
 
@@ -274,7 +277,7 @@ Core normalized mappings include:
 
 - Parquet UTF8 / STRING logical type -> `STRING`
 - Parquet `INT32` / `INT64` -> `INT32` / `INT64`
-- Parquet logical signed/unsigned integers -> matching `INT*` / `UINT*`
+- Parquet logical signed/unsigned integers -> matching `INT8`, `INT16`, `INT32`, `INT64`, `UINT8`, `UINT16`, `UINT32`, or `UINT64`, using the decoded logical type object’s `bitWidth` and `isSigned` attributes. Equivalent legacy converted types keep the same normalized mapping.
 - Parquet `FLOAT` / `DOUBLE` -> `FLOAT32` / `FLOAT64`
 - Parquet DATE -> `DATE`
 - Parquet TIMESTAMP variants -> `TIMESTAMP`

@@ -74,9 +74,12 @@ The result view can show:
 - Changed fields only
 - Added fields
 - Removed fields
+- Renamed fields
 - Type changes
 - Potentially breaking changes
 - Review items
+
+The Renamed filter shows fields matched by a unique Field ID on both Parquet sides, including renames with other changes. Search can match either the old or new path. Similar names or ambiguous IDs do not create rename matches.
 
 Search and filters affect only the screen. Copy, Markdown export, and JSON export always use the complete comparison result.
 
@@ -118,6 +121,8 @@ JSON values keep their intrinsic JSON type. For example, the string `"123"` rema
 ### Cross-format comparison
 
 Schema Diff preserves each format's original type details and compares a conservative normalized type where appropriate. Equivalent representations such as Parquet STRING semantics and inferred `STRING` can match without creating a format-only type change.
+
+Parquet logical INTEGER types preserve their declared width (8 / 16 / 32 / 64 bits) and signedness. Signed INT32 / INT64 can match the corresponding inferred types; unsigned or narrower types remain distinct.
 
 Normalization intentionally does not erase semantics that are not known to be equivalent. For example, Decimal is not treated as inferred `FLOAT64`, JSON objects are not silently treated as Parquet `MAP`, and date-looking JSON strings remain `STRING`.
 

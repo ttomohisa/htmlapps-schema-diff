@@ -424,3 +424,29 @@ def make_dictionary_decimal(path):
 
 make_dictionary_decimal(root/'decimal-dictionary.parquet')
 print(root/'decimal-dictionary.parquet')
+
+# Logical INTEGER width/sign coverage, paired with the legacy converted types.
+integer_nodes=[]
+converted_integer_nodes=[]
+for bits in (8,16,32,64):
+    for signed in (True,False):
+        prefix='int' if signed else 'uint'
+        physical='INT32' if bits<=32 else 'INT64'
+        integer_nodes.append(leaf(f'{prefix}{bits}',physical,
+                                  logical=('INTEGER',{'bit_width':bits,'signed':signed})))
+        converted_integer_nodes.append(leaf(f'{prefix}{bits}',physical,
+                                            converted=f'{prefix.upper()}_{bits}'))
+make(root/'integer-logical.parquet',integer_nodes)
+make(root/'integer-converted.parquet',converted_integer_nodes)
+
+# A rename can also change type/nullability; view filters must not hide it.
+make(root/'rename-filter-before.parquet',[
+    leaf('old_name','INT32',field_id=101),
+    leaf('stable','INT32',field_id=102),
+    leaf('removed','INT32',field_id=103),
+])
+make(root/'rename-filter-after.parquet',[
+    leaf('new_name','INT64',field_id=101,repetition='REQUIRED'),
+    leaf('stable','INT32',field_id=102),
+    leaf('added','INT32',field_id=104),
+])
