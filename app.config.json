@@ -3,7 +3,7 @@
   "name": "Schema Diff",
   "nameJa": "Schema Diff",
   "slug": "schema-diff",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Compare Parquet, CSV, TSV, JSONL, and NDJSON schemas locally across formats, with compatibility guidance, first-10-row previews, search, filters, and Markdown / JSON reports.",
   "descriptionJa": "Parquet / CSV / TSV / JSONL / NDJSONのスキーマを完全ローカルで横断比較します。互換性の目安、先頭10行プレビュー、検索・フィルター、Markdown / JSONレポートに対応します。",
   "defaultLanguage": "auto",

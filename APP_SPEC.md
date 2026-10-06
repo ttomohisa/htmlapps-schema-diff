@@ -2,9 +2,9 @@
 
 ## Status
 
-- Current version: `v1.0.0`
+- Current version: `v1.0.1`
 - Release status: formal release
-- Supported in v1.0.0: Apache Parquet, CSV, TSV, JSONL, NDJSON
+- Supported in v1.0.1: Apache Parquet, CSV, TSV, JSONL, NDJSON
 - Processing: fully local in the browser
 - Release artifacts: `dist/index.html` and `dist/index.self-extract.html`
 
@@ -13,6 +13,12 @@
 Schema Diff compares a Before schema and an After schema without uploading either file. It is intentionally focused on schema changes rather than row-data differences.
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
+
+## v1.0.1 scope — Header consistency
+
+- Use EN in Japanese UI and JA in English UI, with localized target-language accessible names and titles.
+- Preserve 完全ローカル処理 / Fully local processing, localized Help labels/titles, responsive visibility, comparison and export behavior.
+- Synchronize canonical metadata, header, build manifest, report version, and generated artifacts at v1.0.1.
 
 ## v1.0.0 scope — Formal release
 
