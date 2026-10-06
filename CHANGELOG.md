@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## v1.0.1 - 2026-10-06
+
+- Standardize EN / JA header targets with localized accessible names and titles. Preserve the existing local-processing badge and Help localization.
+- Synchronize canonical metadata and standalone header versions at v1.0.1.
+- Add source, readable, root-download, and decompressed self-extract header regressions without changing data processing or responsive visibility.
 
 - Add a Japanese / English Renamed display filter that intersects field-path search while preserving full Markdown / JSON exports and existing unique-Field-ID matching.
 - Fix Parquet logical INTEGER normalization to preserve all eight signed / unsigned widths instead of reading attributes from the type-name string; keep conservative cross-format differences.
