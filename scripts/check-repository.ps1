@@ -264,3 +264,7 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "Node.js is r
 & node (Join-Path $Root "scripts/test-header-consistency.cjs") (Join-Path $Root "src/index.template.html") (Join-Path $Root "dist/index.html") (Join-Path $Root "schema-diff.html") (Join-Path $Root "dist/index.self-extract.html")
 if ($LASTEXITCODE -ne 0) { throw "Header consistency regression checks failed." }
 Write-Host "[OK] Header consistency checks passed." -ForegroundColor Green
+
+# Keep the supplied icon consistent across every release surface.
+& node (Join-Path $Root "scripts/test-icon-parity.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Icon parity regression checks failed." }

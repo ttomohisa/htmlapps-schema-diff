@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.2 - 2026-10-09
+
+- Apply the supplied redesigned icon to the canonical SVG asset, app header, and embedded favicons across standalone releases.
+- Preserve the original SVG artwork and viewBox; add regression checks for asset and release icon parity.
+
 ## v1.0.1 - 2026-10-06
 
 - Standardize EN / JA header targets with localized accessible names and titles. Preserve the existing local-processing badge and Help localization.
