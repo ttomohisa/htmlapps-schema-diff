@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1095 1095">
-<rect x="88.5" y="88.5" width="918" height="918" rx="229.5" fill="#0e6752"/>
+<rect x="88.5" y="88.5" width="918" height="918" rx="229.5" fill="#16624f"/>
 <defs>
 <g id="db" fill="#fbfcfc">
 <ellipse cx="116.5" cy="45.5" rx="116" ry="45.5"/>
@@ -8,7 +8,7 @@
 </g>
 <g id="panel">
 <rect width="311" height="365" rx="20" fill="#fbfcfc"/>
-<g fill="#0e6752">
+<g fill="#16624f">
 <rect x="24" y="24" width="262" height="70" rx="14"/>
 <rect x="24" y="106" width="262" height="69" rx="14"/>
 <rect x="24" y="187" width="262" height="70" rx="14"/>

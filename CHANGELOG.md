@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3 - 2026-10-09
+
+- Normalize the canonical icon brand green to #16624f while preserving the supplied artwork and exact 25% corner radius.
+- Rebuild matching header, favicon, download alias, and self-extract artifacts.
+
 ## v1.0.2 - 2026-10-09
 
 - Apply the supplied redesigned icon to the canonical SVG asset, app header, and embedded favicons across standalone releases.
