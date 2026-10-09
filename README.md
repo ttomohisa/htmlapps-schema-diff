@@ -1,6 +1,6 @@
 # Schema Diff
 
-Version: v1.0.1
+Version: v1.0.2
 
 The header uses EN / JA language targets with localized accessible names and Help titles; the version follows vMAJOR.MINOR.PATCH. The local-processing badge remains 完全ローカル処理 / Fully local processing.
 

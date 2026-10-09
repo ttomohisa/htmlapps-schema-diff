@@ -1,6 +1,6 @@
 # Schema Diff
 
-バージョン: v1.0.1
+バージョン: v1.0.2
 
 ヘッダーの言語切り替えは EN / JA で統一し、切り替え先とヘルプの説明は表示言語に合わせます。バージョンは vMAJOR.MINOR.PATCH 形式で、バッジは「完全ローカル処理」/「Fully local processing」のままです。
 

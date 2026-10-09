@@ -2,9 +2,9 @@
 
 ## Status
 
-- Current version: `v1.0.1`
+- Current version: `v1.0.2`
 - Release status: formal release
-- Supported in v1.0.1: Apache Parquet, CSV, TSV, JSONL, NDJSON
+- Supported in v1.0.2: Apache Parquet, CSV, TSV, JSONL, NDJSON
 - Processing: fully local in the browser
 - Release artifacts: `dist/index.html` and `dist/index.self-extract.html`
 
