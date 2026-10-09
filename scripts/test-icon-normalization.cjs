@@ -1,0 +1,11 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const svg = fs.readFileSync(path.join(__dirname, '../assets/favicon.svg'), 'utf8');
+const tag = svg.match(/<rect\b[^>]*>/)[0];
+const attrs = Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(m => [m[1], m[2]]));
+assert.equal(attrs.fill.toLowerCase(), '#16624f', 'Canonical background uses the shared brand green');
+assert.equal(Number(attrs.rx), Number(attrs.width) / 4, 'Horizontal corner radius is exactly 25%');
+assert.equal(Number(attrs.ry || attrs.rx), Number(attrs.height) / 4, 'Vertical corner radius is exactly 25%');
+assert.ok(!svg.includes('#0e6752'), 'Matching artwork cutouts use the same normalized green');
+console.log('Canonical icon color and exact 25% background radii passed.');

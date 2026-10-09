@@ -268,3 +268,6 @@ Write-Host "[OK] Header consistency checks passed." -ForegroundColor Green
 # Keep the supplied icon consistent across every release surface.
 & node (Join-Path $Root "scripts/test-icon-parity.cjs")
 if ($LASTEXITCODE -ne 0) { throw "Icon parity regression checks failed." }
+
+& node (Join-Path $Root "scripts/test-icon-normalization.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Icon normalization checks failed." }

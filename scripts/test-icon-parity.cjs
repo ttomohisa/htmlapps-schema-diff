@@ -4,9 +4,9 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { gunzipSync } = require('node:zlib');
 const root = path.resolve(__dirname, '..');
-const expected = {"sha256": "07d2736a1992731fbeffa342e199dfc04f42baa8dd6b7bf488a2c02d7d75c953", "viewBox": "0 0 1095 1095", "alias": "schema-diff.html", "imageHeader": true, "faviconPlaceholder": true};
+const expected = {"sha256": "2aa0af4efe9810d54fed3991c5fb5223901a64ae1ad15e2299018dd5ba7a8f5f", "viewBox": "0 0 1095 1095", "alias": "schema-diff.html", "imageHeader": true, "faviconPlaceholder": true};
 const asset = fs.readFileSync(path.join(root, 'assets/favicon.svg'));
-assert.equal(createHash('sha256').update(asset).digest('hex'), expected.sha256, 'Keep the supplied icon bytes unchanged');
+assert.equal(createHash('sha256').update(asset).digest('hex'), expected.sha256, 'Keep the normalized canonical icon bytes unchanged');
 assert.equal(asset.toString().match(/viewBox="([^"]+)"/)[1], expected.viewBox, 'Preserve the supplied viewBox');
 const decode = uri => {
   assert.match(uri, /^data:image\/svg\+xml[;,]/, 'Embed the SVG without a network request');
