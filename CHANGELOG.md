@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.4 - 2026-10-11
+
+- Prevent background page scrolling while Help is open, preserving the existing independently scrolling Help body and dismissal behavior.
+- Explain the Help interaction in Japanese and English; preserve the existing local-processing shield and all schema processing/report behavior.
+- Add modal scroll-lock and Help preservation checks to canonical source, readable, root-download, and self-extract verification.
+
 ## 1.0.3 - 2026-10-09
 
 - Normalize the canonical icon brand green to #16624f while preserving the supplied artwork and exact 25% corner radius.

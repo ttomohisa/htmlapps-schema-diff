@@ -2,9 +2,9 @@
 
 ## Status
 
-- Current version: `v1.0.3`
+- Current version: `v1.0.4`
 - Release status: formal release
-- Supported in v1.0.3: Apache Parquet, CSV, TSV, JSONL, NDJSON
+- Supported in v1.0.4: Apache Parquet, CSV, TSV, JSONL, NDJSON
 - Processing: fully local in the browser
 - Release artifacts: `dist/index.html` and `dist/index.self-extract.html`
 
@@ -13,6 +13,20 @@
 Schema Diff compares a Before schema and an After schema without uploading either file. It is intentionally focused on schema changes rather than row-data differences.
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
+
+## v1.0.4 scope — Help background scroll lock
+
+- Lock both document scrolling elements only while a native modal dialog is open using `html:has(dialog:modal), body:has(dialog:modal)`.
+- Preserve the existing bounded Help shell, fixed internal header, independently scrollable body, safe-area padding, native Escape cancellation, Close button, backdrop dismissal, and focus restoration.
+- Preserve the existing shield/check local-processing badge, schema inference, parsers, previews, comparison, full report export, and local-only runtime.
+- Keep Japanese / English Help, both README files, configuration, visible version, and generated release checks synchronized.
+
+### Acceptance criteria
+
+1. On desktop and narrow/short viewports in Japanese and English, outside-wheel input cannot scroll the background while Help is open; normal page scrolling returns after Close, Escape, or backdrop dismissal.
+2. The Help title and Close button remain visible, and the final offline note is reachable by scrolling only the dialog body, including after resize and repeated reopening.
+3. Native keyboard focus remains contained while Help is open and returns to its opener on dismissal. Loaded files, inference settings, comparison, filter/search, and exports remain unchanged by opening and closing Help.
+4. The modal regression contracts run against source, readable release, root download alias, and decompressed self-extract HTML through the repository check. These static/handler checks supplement native browser verification rather than establishing native scroll or focus behavior.
 
 ## v1.0.1 scope — Header consistency
 
