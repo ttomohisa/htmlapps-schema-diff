@@ -231,12 +231,16 @@ if ([string]::IsNullOrWhiteSpace([string]$app.version)) { throw "app.config.json
 
 # Native Node tests exercise actual runtime functions, including async ownership.
 $node = Get-Command node -ErrorAction Stop
+& $node.Source (Join-Path $Root "scripts/test-modal-scroll-lock.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Schema Diff source modal scroll-lock checks failed." }
 & $node.Source --test (Join-Path $Root "scripts/test-schema-diff.cjs")
 if ($LASTEXITCODE -ne 0) { throw "Schema Diff runtime regression tests failed." }
 
 $buildArguments = @{}
 if ($ForceDownload) { $buildArguments.ForceDownload = $true }
 & (Join-Path $Root "build-standalone.ps1") @buildArguments
+& $node.Source (Join-Path $Root "scripts/test-modal-scroll-lock.cjs") (Join-Path $Root "dist/index.html") (Join-Path $Root "schema-diff.html") (Join-Path $Root "dist/index.self-extract.html")
+if ($LASTEXITCODE -ne 0) { throw "Schema Diff generated modal scroll-lock checks failed." }
 & $node.Source (Join-Path $Root "scripts/test-release-parity.cjs")
 if ($LASTEXITCODE -ne 0) { throw "Schema Diff release parity or generated runtime tests failed." }
 

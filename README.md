@@ -1,6 +1,6 @@
 # Schema Diff
 
-Version: v1.0.2
+Version: v1.0.4
 
 The header uses EN / JA language targets with localized accessible names and Help titles; the version follows vMAJOR.MINOR.PATCH. The local-processing badge remains 完全ローカル処理 / Fully local processing.
 
@@ -69,6 +69,8 @@ Schema Diff currently has no package entries in `dependencies.json`; the Parquet
 5. Review the summary, field-path changes, original/normalized types, and compatibility guidance.
 6. Use field-path search or the display filter to investigate the result.
 7. Use **Copy result**, **Save Markdown**, or **Save JSON** when you need to keep or process the full comparison.
+
+Help keeps the background page still while open. Its content scrolls independently; close it with the Close button, Esc, or a click outside the dialog.
 
 ### Display filters
 

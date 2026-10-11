@@ -32,3 +32,10 @@ The starter does not enable WebRTC by default. If the application copies `compon
 
 `connect-src 'none'` remains expected. The direct WebRTC DataChannel is intentional peer-to-peer application traffic, not a hidden runtime dependency.
 
+## Help modal regression (v1.0.4)
+
+- Check Japanese and English at desktop and narrow/short viewport sizes, including 393 x 252 CSS pixels.
+- Open Help, scroll its body to the final offline note, and wheel outside the dialog and at the body tail. The background must stay at its original scroll position.
+- Verify the title/Close button remain visible after resizing while open. Dismiss with Close, Escape, and the backdrop; focus should return to Help and normal page scrolling should resume. Repeat opening and dismissal.
+- Repeat with synthetic Before/After files loaded and a filtered comparison. Opening or closing Help must preserve sources, settings, search/filter, and full Markdown/JSON reports.
+- `node scripts/test-modal-scroll-lock.cjs` checks source CSS/markup and actual Help event handlers with a DOM adapter. It accepts readable, alias, and self-extract HTML paths as arguments; `scripts/check-repository.ps1` runs every canonical variant. Native wheel/focus/viewport behavior still requires the browser checks above.
