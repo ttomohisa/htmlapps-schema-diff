@@ -70,7 +70,7 @@ Schema Diff currently has no package entries in `dependencies.json`; the Parquet
 6. Use field-path search or the display filter to investigate the result.
 7. Use **Copy result**, **Save Markdown**, or **Save JSON** when you need to keep or process the full comparison.
 
-Help keeps the background page still while open. Its content scrolls independently; close it with the Close button, Esc, or a click outside the dialog.
+Close Help with the Close button, Esc, or a click outside the dialog.
 
 ### Display filters
 
