@@ -46,10 +46,10 @@ for (const artifact of artifacts.length ? artifacts : [process.env.SCHEMA_DIFF_H
   });
 
   for (const language of ['ja', 'en']) {
-    test(`${artifact}: ${language} Help explains background locking and dismissal`, () => {
+    test(`${artifact}: ${language} Help explains dismissal without implementation commentary`, () => {
       assert.match(help, /data-i18n="helpScroll"/);
       const text = translations[language].helpScroll || '';
-      assert.match(text, language === 'ja' ? /背景.*スクロール/ : /background.*scroll/i);
+      assert.doesNotMatch(text, language === 'ja' ? /背景.*スクロール/ : /background.*scroll/i);
       assert.match(text, language === 'ja' ? /閉じる.*Esc.*外側/ : /Close.*Esc.*outside/i);
     });
   }
