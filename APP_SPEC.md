@@ -454,3 +454,8 @@ Initial schema loading remains metadata-only. Row-group/page data is read only a
 19. Runtime network requests remain zero and CSP keeps `connect-src 'none'`.
 20. `dist/index.html` and `dist/index.self-extract.html` remain valid single-file artifacts.
 21. No DuckDB-Wasm or other WASM runtime is included.
+
+## Shared mobile footer and Help build information
+
+- Hide only the informational page footer at the existing smartphone breakpoint (820px); preserve functional bottom navigation/actions and Help controls.
+- The existing build-information disclosure is the final item inside the scrollable Help body, retaining its metadata IDs, population, and desktop/mobile availability.

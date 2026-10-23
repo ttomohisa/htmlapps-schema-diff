@@ -74,11 +74,11 @@ for (const artifact of artifacts.length ? artifacts : [process.env.SCHEMA_DIFF_H
     vm.runInNewContext(handlers, { $: id => nodes.get(id) });
     const dialog = nodes.get('#helpDialog'), open = () => nodes.get('#helpButton').handlers.click();
     open(); assert.equal(dialog.open, true);
-    dialog.handlers.click({ clientX: 50, clientY: 50 }); assert.equal(dialog.open, true);
+    dialog.handlers.click({ target: dialog, clientX: 50, clientY: 50 }); assert.equal(dialog.open, true);
     nodes.get('#closeHelpButton').handlers.click(); assert.equal(dialog.open, false);
     for (const point of [{ clientX: 0, clientY: 50 }, { clientX: 210, clientY: 50 }, { clientX: 50, clientY: 0 }, { clientX: 50, clientY: 190 }]) {
       open(); assert.equal(dialog.open, true);
-      dialog.handlers.click(point); assert.equal(dialog.open, false);
+      dialog.handlers.click({ target: dialog, ...point }); assert.equal(dialog.open, false);
     }
     assert.equal(dialog.handlers.cancel, undefined, 'Keep native Escape cancellation unmodified');
   });
