@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Hide the informational page footer at the existing smartphone breakpoint and move the unchanged build information to the end of Help. Preserve native disclosure and dialog dismissal.
+
 ## v1.0.4 - 2026-10-11
 
 - Prevent background page scrolling while Help is open, preserving the existing independently scrolling Help body and dismissal behavior.
