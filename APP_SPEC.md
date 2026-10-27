@@ -459,3 +459,5 @@ Initial schema loading remains metadata-only. Row-group/page data is read only a
 
 - Hide only the informational page footer at the existing smartphone breakpoint (820px); preserve functional bottom navigation/actions and Help controls.
 - The existing build-information disclosure is the final item inside the scrollable Help body, retaining its metadata IDs, population, and desktop/mobile availability.
+
+Common UI v1: Work is retained in this tab only. Edit the report filename before saving the full comparison. Downloads report their start; independent copy/Markdown/JSON failures persist with retry guidance. Shared language selection preserves files, settings and filters.

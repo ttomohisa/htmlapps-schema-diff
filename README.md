@@ -247,3 +247,5 @@ Bug reports and feature proposals are welcome through GitHub Issues after the re
 Copyright © 2026 ttomohisa
 
 Licensed under the [MIT License](LICENSE).
+
+Common UI v1: Work is retained in this tab only. Edit the report filename before saving the full comparison. Downloads report their start; independent copy/Markdown/JSON failures persist with retry guidance. Shared language selection preserves files, settings and filters.

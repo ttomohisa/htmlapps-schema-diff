@@ -275,3 +275,6 @@ if ($LASTEXITCODE -ne 0) { throw "Icon parity regression checks failed." }
 
 & node (Join-Path $Root "scripts/test-icon-normalization.cjs")
 if ($LASTEXITCODE -ne 0) { throw "Icon normalization checks failed." }
+
+& node --test (Join-Path $Root "tests/ui-conventions.test.cjs") (Join-Path $Root "tests/mobile-build-info.test.cjs") (Join-Path $Root "tests/help-copy.test.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Common UI, mobile Help or Help copy regressions failed." }

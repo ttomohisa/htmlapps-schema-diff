@@ -318,3 +318,5 @@ All notable changes to this template are documented here.
 - Responsive bilingual starter interface with local persistence and export.
 - GitHub Actions for build validation and GitHub Pages deployment.
 - LLM implementation contract, product specification, architecture, and workflow guides.
+
+Common UI v1: Work is retained in this tab only. Edit the report filename before saving the full comparison. Downloads report their start; independent copy/Markdown/JSON failures persist with retry guidance. Shared language selection preserves files, settings and filters.

@@ -27,11 +27,11 @@ function runtime() {
     document: { body: { classList: { toggle() {} } } },
     $: selector => {
       if (!elements.has(selector)) elements.set(selector, {
-        disabled: false, addEventListener(type, callback) { this[type] = callback; }
+        disabled: false, setAttribute(){},removeAttribute(){},addEventListener(type, callback) { this[type] = callback; }
       });
       return elements.get(selector);
     },
-    renderSide() {}, showToast() {},
+    BrowserKittyUI:require('../components/ui-conventions.js'),uiState:{copying:false,errors:{}},renderConventions(){},renderSide() {}, showToast() {},
     renderResults(diff) { ctx.lastDiff = diff; }
   });
   vm.runInContext(section('    const translations=', '    const $=') +
@@ -54,6 +54,16 @@ function deferred() {
   const promise = new Promise((ok, no) => { resolve = ok; reject = no; });
   return { promise, resolve, reject };
 }
+test('queued inference reload cannot replace a newer file on the other side', async () => {
+  const c=runtime(),wait=deferred(),a=ready('a.csv'),b=ready('b.csv'),replacement=csv('id\n9\n','replacement.csv');
+  c.state.before=a;c.state.after=b;
+  c.readSchema=file=>file===a.file?wait.promise:Promise.resolve(b.schema);
+  vm.runInContext(section('    async function reloadInferred(', "    $('#sampleRowsSelect').addEventListener"),c);
+  const reload=c.reloadInferred();
+  await c.setFile('after',replacement);
+  wait.resolve(a.schema);await reload;
+  assert.equal(c.state.after.file,replacement);
+});
 const csv = (text, name = 'sample.csv') => new File([text], name);
 const ready = (name = 'ready.csv') => ({ file: csv('id\n1\n', name), schema: { format: 'csv', source: 'inferred', fields: [], metadata: {}, tracker: {} }, preview: { open: false, loading: false } });
 
@@ -275,6 +285,7 @@ test('JA/EN full reports stay complete under search and filters', async () => {
 function enableResultControls(c) {
   // Real renderers and event callbacks; only DOM sinks / clipboard / downloads are stubbed.
   vm.runInContext(section('    function pill(', '    function markdownEscape(') +
+    section('    function saveReport(', '    async function copyText(') +
     section("    $('#fieldSearch').addEventListener", '    async function reloadInferred('), c);
 }
 const snapshot = value => JSON.stringify(value, (_, v) => typeof v === 'bigint' ? v.toString() : v);
