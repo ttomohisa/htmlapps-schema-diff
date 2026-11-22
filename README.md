@@ -1,6 +1,6 @@
 # Schema Diff
 
-Version: v1.0.4
+Version: v1.0.5
 
 The header uses EN / JA language targets with localized accessible names and Help titles; the version follows vMAJOR.MINOR.PATCH. The local-processing badge remains 完全ローカル処理 / Fully local processing.
 
@@ -216,6 +216,8 @@ Schema Diff is designed for **fully local processing**.
 - CSV / TSV / JSONL / NDJSON are read incrementally according to the configured sample and preview request.
 
 The GitHub Pages version still needs the initial HTML request to load the app. For use with the network completely disconnected, open `dist/index.html` locally.
+
+Literal names containing path notation use quoted field paths to stay distinct from nested fields (for example, `["a.b"]` versus `a.b`). A Parquet preview continues into the next row group if the first one has fewer than ten rows.
 
 ## Limitations
 

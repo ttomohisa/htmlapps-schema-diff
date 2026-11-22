@@ -398,3 +398,96 @@ for (const format of ['csv', 'tsv', 'jsonl', 'ndjson']) test(`${format}: integer
     assert.equal(c.buildJsonReport(diff).schemaVersion, 1);
   }
 });
+
+test('CSV / TSV include the final line without a trailing newline in header detection', async () => {
+  for (const [format,delimiter] of [['csv',','],['tsv','\t'],['csv',';']]) {
+    const c=runtime();c.inferenceSettings.headerMode='auto';
+    const raw='id'+delimiter+'name\n1'+delimiter+'Kitty';
+    const before=await c.readSchema(csv(raw,'before.'+format));
+    const after=await c.readSchema(csv(raw+'\n','after.'+format));
+    assert.deepEqual(plain(before.fields.map(f=>f.path)),['id','name']);
+    assert.equal(before.fields[0].type,'INT32');
+    assert.equal(before.metadata.sampled_rows,1);
+    assert.equal(c.diffSchemas(before,after).summary.changed,0);
+    const preview=await c.readFilePreview({file:csv(raw,'data.'+format),schema:before});
+    assert.equal(preview.rows[0].name,'Kitty');
+  }
+});
+
+test('JSONL literal dotted/bracketed names do not collide with nested paths', async () => {
+  const c=runtime(),before=await c.readSchema(csv('{"a":{"b":1},"a.b":"text","arr[]":true}\n','before.jsonl')),
+    after=await c.readSchema(csv('{"a":{"b":"text"},"a.b":1,"arr[]":false}\n','after.jsonl'));
+  assert.ok(before.fields.some(f=>f.path==='a.b'));
+  assert.ok(before.fields.some(f=>f.path==='["a.b"]'));
+  assert.ok(before.fields.some(f=>f.path==='["arr[]"]'));
+  const diff=c.diffSchemas(before,after);
+  assert.equal(diff.summary.modified,2);
+  assert.deepEqual(plain(diff.rows.filter(r=>r.changes.length).map(r=>r.path).sort()),['["a.b"]','a.b']);
+  c.inferenceSettings.headerMode='yes';
+  const flat=await c.readSchema(csv('a.b\n1\n','flat.csv'));
+  const literal=await c.readSchema(csv('{"a.b":1}\n','literal.jsonl'));
+  assert.equal(c.diffSchemas(flat,literal).summary.changed,0);
+  const preview=await c.readFilePreview({file:csv('a.b\n1\n','flat.csv'),schema:flat});
+  assert.deepEqual(plain(preview.columns),['a.b']);
+});
+
+test('inferred schemas respect 64-bit integer, number precision and valid dates', () => {
+  const c=runtime();
+  assert.equal(c.inferredValueType('9223372036854775807'),'INT64');
+  assert.equal(c.inferredValueType('9223372036854775808'),'STRING');
+  assert.equal(c.inferredValueType('-9223372036854775809'),'STRING');
+  assert.equal(c.inferredValueType('2026-02-30'),'STRING');
+  assert.equal(c.inferredValueType('2024-02-29'),'DATE');
+  assert.equal(c.inferredValueType('2026-02-30T12:30:00Z'),'STRING');
+  assert.equal(c.jsonPrimitiveType(1e100),'FLOAT64');
+  assert.equal(c.jsonPrimitiveType(2147483648),'INT64');
+  assert.equal(c.jsonPrimitiveType(Number.MAX_SAFE_INTEGER+1),'FLOAT64');
+});
+
+test('Parquet unsigned logical and converted integers render correctly', () => {
+  const c=runtime();
+  assert.equal(c.parquetConvertValue(-1,{type:'INT32',logical_type:{type:'INTEGER',bitWidth:32,isSigned:false}}),4294967295);
+  assert.equal(c.parquetConvertValue(-1,{type:'INT32',converted_type:'UINT_32'}),4294967295);
+  assert.equal(c.parquetConvertValue(-1n,{type:'INT64',converted_type:'UINT_64'}),18446744073709551615n);
+  assert.equal(c.parquetConvertValue(-1n,{type:'INT64',logical_type:{type:'INTEGER',bitWidth:64,isSigned:false}}),18446744073709551615n);
+});
+
+test('Parquet repeated definition levels preserve null, empty and null-element lists', () => {
+  const c=runtime();
+  const chain=[
+    {element:{repetition_type:'REQUIRED'}},
+    {element:{repetition_type:'OPTIONAL'}},
+    {element:{repetition_type:'REPEATED'}},
+    {element:{repetition_type:'OPTIONAL'}}
+  ];
+  const assemble=(values,defs,reps)=>c.parquetAssembleEntries(values,defs,reps,3,1,defs.length,chain);
+  assert.deepEqual(plain(assemble([], [0], [0])),[null]);
+  assert.deepEqual(plain(assemble([], [1], [0])),[[]]);
+  assert.deepEqual(plain(assemble([], [2], [0])),[[null]]);
+  assert.deepEqual(plain(assemble(['x'], [3], [0])),[['x']]);
+  assert.deepEqual(plain(assemble(['x'], [2,3], [0,1])),[[null,'x']]);
+});
+
+test('Parquet preview reads row groups in order until ten actual rows are decoded', async () => {
+  const c=runtime();
+  c.parquetLeafSchemaPaths=()=>[{path:['id']}];
+  c.parquetDecodeColumnChunk=async(_buffer,column,_leaf,limit)=>
+    (Number(column.meta_data.data_page_offset)===0?[1,2,3]:[4,5,6,7,8,9,10,11,12]).slice(0,limit);
+  const file=new File([new Uint8Array(3)],'multi.parquet');
+  const group=(start,count)=>({num_rows:count,columns:[{meta_data:{path_in_schema:['id'],data_page_offset:start,total_compressed_size:1,num_values:count}}]});
+  const schema={metadata:{num_rows:12,row_groups:[group(0,3),group(1,9)]},fields:[{path:'id',depth:0}]};
+  const result=await c.parquetPreviewRows(file,schema,10);
+  assert.deepEqual(plain(result.rows.map(row=>row.id)),[1,2,3,4,5,6,7,8,9,10]);
+  assert.equal(result.tracker.requests,2);
+});
+
+test('JSONL preview ignores inherited object properties in missing cells', () => {
+  const c=runtime();
+  vm.runInContext(section('    function previewMarkup(', '    async function togglePreview('),c);
+  const entry={schema:{format:'jsonl'},preview:{open:true,data:{
+    columns:['constructor','toString'],rows:[JSON.parse('{"constructor":"yes","toString":"ok"}'),{}]
+  }}};
+  const markup=c.previewMarkup('before',entry);
+  assert.match(markup,/>yes</);
+  assert.doesNotMatch(markup,/function Object|function toString/);
+});

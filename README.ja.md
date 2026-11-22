@@ -1,6 +1,6 @@
 # Schema Diff
 
-バージョン: v1.0.4
+バージョン: v1.0.5
 
 ヘッダーの言語切り替えは EN / JA で統一し、切り替え先とヘルプの説明は表示言語に合わせます。バージョンは vMAJOR.MINOR.PATCH 形式で、バッジは「完全ローカル処理」/「Fully local processing」のままです。
 
@@ -214,6 +214,8 @@ Schema Diffは**完全ローカル処理**を前提にしています。
 - CSV / TSV / JSONL / NDJSONは設定したサンプル数とプレビュー要求に応じてincrementalに読みます。
 
 GitHub Pages版ではアプリを開くための最初のHTML通信は発生します。完全にネットワークを切って使う場合は `dist/index.html` をローカルで開いてください。
+
+列名にドットや角括弧が含まれる場合、Field pathでは引用符付きの角括弧を使い、入れ子のフィールドと区別します（例：`["a.b"]` と `a.b`）。Parquetの先頭10行プレビューでは、最初のrow groupに10行未満しかない場合、後続のrow groupも読み込みます。
 
 ## 制限事項
 

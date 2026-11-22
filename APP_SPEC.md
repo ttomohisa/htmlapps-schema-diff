@@ -2,9 +2,9 @@
 
 ## Status
 
-- Current version: `v1.0.4`
+- Current version: `v1.0.5`
 - Release status: formal release
-- Supported in v1.0.4: Apache Parquet, CSV, TSV, JSONL, NDJSON
+- Supported in v1.0.5: Apache Parquet, CSV, TSV, JSONL, NDJSON
 - Processing: fully local in the browser
 - Release artifacts: `dist/index.html` and `dist/index.self-extract.html`
 
@@ -13,6 +13,16 @@
 Schema Diff compares a Before schema and an After schema without uploading either file. It is intentionally focused on schema changes rather than row-data differences.
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
+
+## v1.0.5 scope — Data correctness fixes
+
+- Include the last CSV / TSV record in delimiter and header detection when the initial sample reaches the actual end of file.
+- Encode literal names containing path syntax unambiguously in Parquet, CSV / TSV and JSONL / NDJSON field paths, without changing the CSV preview's original header labels.
+- Reject CSV integers outside the signed INT64 range and invalid calendar dates, and infer unsafe JSON integers conservatively as FLOAT64.
+- Assemble Parquet previews from consecutive row groups without padding missing rows, preserve unsigned integer logical and converted types, and distinguish null collections, empty collections and null elements.
+- Do not render inherited JavaScript properties for absent JSONL preview keys.
+- Keep declared/inferred distinctions, original metadata-only schema reading, file swap, search, filters, full Markdown / JSON output, bilingual UI, CSP network blocking and both standalone formats.
+- Test these cases in the native runtime and across readable, alias and self-extract outputs.
 
 ## v1.0.4 scope — Help background scroll lock
 

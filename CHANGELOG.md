@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v1.0.5 - 2026-11-23
+
+- Fix CSV / TSV header inference when the last row has no trailing newline.
+- Keep special-character field names separate from nested paths across CSV, JSONL and Parquet.
+- Correct signed INT64 bounds, JSON numeric precision classification and Gregorian date validation.
+- Read Parquet preview rows across row groups; preserve unsigned numbers and null/empty collection distinctions.
+- Avoid inherited JavaScript property values in JSONL preview cells.
+- Add parser, comparison and preview regression tests.
+
 - Hide the informational page footer at the existing smartphone breakpoint and move the unchanged build information to the end of Help. Preserve native disclosure and dialog dismissal.
 
 ## v1.0.4 - 2026-10-11
