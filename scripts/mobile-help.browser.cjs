@@ -10,9 +10,15 @@ const buildSelector = '.build-section details';
 
 async function prepareApp(page, width, label) {
   assert.equal(await page.locator('#mobileCompareBar').isVisible(),false,label+': empty comparison action remains hidden');
+  assert.equal(await page.locator('#pageIntro').isVisible(),true,label+': introduction is visible before selecting a file');
+  assert.equal(await page.locator('main h1.sr-only').count(),1,label+': the app heading stays accessible');
   await page.locator('#beforeInput').setInputFiles({name:'before.csv',mimeType:'text/csv',buffer:Buffer.from('id,name\n1,Kitty\n')});
+  await page.locator('#pageIntro').waitFor({state:'hidden'});
+  assert.equal(await page.locator('#pageIntro').getAttribute('hidden'),'',
+    label+': introductory text and privacy badge hide after the first selected file');
   await page.locator('#afterInput').setInputFiles({name:'after.csv',mimeType:'text/csv',buffer:Buffer.from('id,name,score\n1,Kitty,3\n')});
   await page.waitForFunction(()=>!document.querySelector('#compareButton').disabled);
+  assert.equal(await page.locator('#pageIntro').isVisible(),false,label+': introduction remains hidden when both files are loaded');
   assert.equal(await page.locator('#mobileCompareBar').isVisible(),width<=820,label+': ready comparison action preserved');
 }
 async function smoke(page, results, file) {
@@ -57,7 +63,8 @@ async function main() {
                   && [...range.getClientRects()].every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1);
               }), label + ': badge text fits');
             }
-            assert.equal(await page.locator('.page-intro h1:not(.sr-only)').count(), 0, label + ': no visible hero heading');
+            assert.equal(await page.locator('.page-intro h1').count(), 0, label + ': intro has no visible heading');
+            assert.equal(await page.locator('.side-label').count(), 0, label + ': no OLD/NEW labels');
             assert.match(await page.locator('.page-intro [data-i18n="lead"]').innerText(), language === 'ja' ? /2つのファイルのスキーマ/ : /two file schemas/i, label + ': short hero copy');
             assert.equal(await page.locator('[data-i18n="workspaceBody"]').count(), 0, label + ': removed duplicated file instructions');
             if (width > 520) assert.equal(await page.locator('.brand-meta').innerText(), language === 'ja'
@@ -68,7 +75,38 @@ async function main() {
             assert.equal(await page.locator('main #buildVersion').count(), 0, label);
             assert.equal(await page.locator('footer').isVisible(), width > 820, label);
             await prepareApp(page, width, label);
-
+            for (const side of ['before','after']) {
+              const actions = page.locator('#' + side + 'Content .file-action-link');
+              assert.equal(await actions.count(),2,label+': '+side+' has two text-link actions');
+              const styles = await actions.evaluateAll(nodes => nodes.map(node => {
+                const css = getComputedStyle(node);
+                return { tag:node.tagName, border:css.borderTopWidth,
+                  background:css.backgroundColor, decoration:css.textDecorationLine,
+                  minHeight:Number.parseFloat(css.minHeight), width:node.getBoundingClientRect().width };
+              }));
+              for (const style of styles) {
+                assert.equal(style.tag,'BUTTON',label+': link style retains keyboard button semantics');
+                assert.equal(style.border,'0px',label+': no button outline around file actions');
+                assert.equal(style.background,'rgba(0, 0, 0, 0)',label+': transparent file action');
+                assert.ok(style.decoration.includes('underline'),label+': underlined file action');
+                assert.ok(style.minHeight >= (width<=520?44:38),label+': file action tap height');
+                assert.ok(style.width>0 && style.width < width/1.5,label+': file action is text width, not full card');
+              }
+            }
+            if(file === 'dist/index.html' && language === 'ja' && width === 360) {
+              const previewButton = page.locator('#beforeContent [data-preview-toggle]');
+              await previewButton.click();
+              await page.locator('#beforePreview').waitFor({state:'visible'});
+              assert.equal(await previewButton.getAttribute('aria-expanded'),'true',label+': preview opens with link-style action');
+              await previewButton.click();
+              await page.locator('#beforePreview').waitFor({state:'detached'});
+              const chooserPromise = page.waitForEvent('filechooser');
+              await page.locator('#beforeContent [data-choose]').click();
+              const chooser = await chooserPromise;
+              await chooser.setFiles({name:'before.csv',mimeType:'text/csv',buffer:Buffer.from('id,name\n1,Kitty\n')});
+              await page.waitForFunction(() => !document.querySelector('#compareButton').disabled);
+              assert.equal(await page.locator('#pageIntro').isVisible(),false,label+': intro remains hidden after file replacement');
+            }
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), label + ': page width');
 
             await page.locator('#helpButton').click();

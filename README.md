@@ -64,9 +64,9 @@ Schema Diff currently has no package entries in `dependencies.json`; the Parquet
 
 ## Usage
 
-1. Add the original file to **Before** and the new file to **After**. File picker and drag & drop are supported.
+1. Add the original file to **Before** and the new file to **After**. File picker and drag & drop are supported. The introductory hint disappears once either file is selected.
 2. For CSV / TSV / JSONL / NDJSON, adjust the inference row limit if needed. CSV / TSV also provide header controls.
-3. Optionally open **Preview first 10 rows** on either file to verify the data being compared. The preview is independent from schema comparison.
+3. Optionally select the **Preview first 10 rows** text link on either file to verify the data being compared, or use **Replace file** to select another input. The preview is independent from schema comparison.
 4. Select **Compare schemas**.
 5. Review the summary, field-path changes, original/normalized types, and compatibility guidance.
 6. Use field-path search or the display filter to investigate the result.

@@ -14,6 +14,13 @@ Schema Diff compares a Before schema and an After schema without uploading eithe
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
 
+## v1.0.5 file workflow refinements
+
+- Use Before and After as the only file-side labels; omit the redundant OLD and NEW tags in both languages.
+- Show the introductory explanation and local-processing badge only before a file is selected. Selecting either Before or After (including drag-and-drop or replacement) hides the whole introduction, on PC and mobile, including while a file is loading or after a read error. The app's screen-reader heading stays in the document outside the conditional introduction.
+- Render the loaded file's "Preview first 10 rows" and "Replace file" controls as underlined text links in the brand green. Keep them as actual accessible buttons with keyboard/focus support, responsive wrapping and at least 44px touch height on narrow phones. The initial empty-file chooser remains a conventional button.
+- Preserve all preview/replace behavior, Before/After swap, the inference disclosure, both languages, schema comparison and report export. Include browser regression checks for initial/selected state, link styling, preview and replacement workflows, and mobile horizontal overflow.
+
 ## v1.0.5 UI and release integration
 
 - Keep only a short bilingual explanation in the visible introductory area and a visually hidden application heading; the header shows the supported format summary without a local-processing suffix.
