@@ -175,7 +175,7 @@ async function main() {
               if (file === 'dist/index.html' && language === 'ja' && [1360, 360].includes(width)) {
                 await page.locator('#afterInput').setInputFiles({
                   name:'identical.csv',mimeType:'text/csv',
-                  buffer:Buffer.from('id,name\\n1,Kitty\\n')
+                  buffer:Buffer.from('id,name\n1,Kitty\n')
                 });
                 await page.waitForFunction(() => !document.querySelector('#compareButton').disabled);
                 await page.locator(width <= 820 ? '#mobileCompareButton' : '#compareButton').click();
