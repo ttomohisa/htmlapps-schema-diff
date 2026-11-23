@@ -1137,6 +1137,82 @@
 
 
     function dropMarkup(){return `<svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 16v4h16v-4"/></svg><div class="drop-title">${escapeHtml(t('dropTitle'))}</div><div class="drop-hint">${escapeHtml(t('dropHint'))}</div><button class="button choose-button" type="button" data-choose="1">${escapeHtml(t('chooseFile'))}</button>`}
+    // Suggested names are deliberately conservative. They never alter the automatic diff.
+    function renameBaseName(field){return String(field?.name||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]/gu,'')}
+    function renameParentPath(field){const path=String(field?.path||''),part=fieldNamePath(field?.name||'');return path.endsWith(part)?path.slice(0,path.length-part.length):path.slice(0,path.lastIndexOf('.')+1)}
+    function renameDistance(a,b){const prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diagonal=prev[0];prev[0]=i;for(let j=1;j<=b.length;j++){const old=prev[j];prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));diagonal=old}}return prev[b.length]}
+    function renameSimilarity(before,after){
+      if(!before||!after||before.depth!==after.depth||before.kind!==after.kind||before.role!==after.role)return 0;
+      if(renameParentPath(before)!==renameParentPath(after))return 0;
+      if(before.normalizedType!==after.normalizedType)return 0;
+      if(before.fieldId!=null&&after.fieldId!=null&&before.fieldId!==after.fieldId)return 0;
+      const a=renameBaseName(before),b=renameBaseName(after);
+      if(!a||!b||a===b&&before.name===after.name)return 0;
+      if(a===b&&a.length>=3)return 1;
+      if(Math.min(a.length,b.length)<8||a.slice(0,3)!==b.slice(0,3))return 0;
+      const score=1-renameDistance(a,b)/Math.max(a.length,b.length);
+      return score>=.88?score:0
+    }
+    function suggestRenameCandidates(original,pairs=new Map()){
+      if(!original?.rows)return[];
+      const removed=original.rows.filter(row=>row.changes.includes('removed')&&!pairs.has(row.beforePath)).slice(0,200);
+      const taken=new Set(pairs.values());
+      const added=original.rows.filter(row=>row.changes.includes('added')&&!taken.has(row.afterPath)).slice(0,200);
+      const candidates=[];
+      for(const before of removed)for(const after of added){
+        const score=renameSimilarity(before.before,after.after);
+        if(score>0)candidates.push({beforePath:before.beforePath,afterPath:after.afterPath,score})
+      }
+      candidates.sort((a,b)=>b.score-a.score||a.beforePath.localeCompare(b.beforePath)||a.afterPath.localeCompare(b.afterPath));
+      return candidates.slice(0,5)
+    }
+    function summarizeComparedRows(rows){
+      const added=rows.filter(r=>r.changes.includes('added')).length,removed=rows.filter(r=>r.changes.includes('removed')).length;
+      const modified=rows.filter(r=>r.changes.length&&!r.changes.includes('added')&&!r.changes.includes('removed')).length;
+      return{fields:rows.length,added,removed,modified,renamed:rows.filter(r=>r.changes.includes('renamed')).length,changed:added+removed+modified,
+        impacts:{breaking:rows.filter(r=>r.impact.level==='breaking').length,review:rows.filter(r=>r.impact.level==='review').length,
+          compatible:rows.filter(r=>r.impact.level==='compatible').length,info:rows.filter(r=>r.impact.level==='info').length}}
+    }
+    function applyConfirmedRenames(original,pairs=new Map()){
+      if(!original||!pairs.size)return original;
+      const added=new Map(original.rows.filter(r=>r.changes.includes('added')).map(r=>[r.afterPath,r]));
+      const removed=new Map(original.rows.filter(r=>r.changes.includes('removed')).map(r=>[r.beforePath,r]));
+      const valid=new Map(),used=new Set();
+      for(const [beforePath,afterPath] of pairs){
+        if(!removed.has(beforePath)||!added.has(afterPath)||used.has(afterPath))continue;
+        valid.set(beforePath,afterPath);used.add(afterPath)
+      }
+      if(!valid.size)return original;
+      const rows=[];
+      for(const row of original.rows){
+        if(row.changes.includes('removed')&&valid.has(row.beforePath)){
+          const match=added.get(valid.get(row.beforePath)),before=row.before,after=match.after;
+          const changes=compareFieldDetails(before,after,{renamed:true,crossFormat:original.crossFormat});
+          const combined={path:after.path,beforePath:before.path,afterPath:after.path,before,after,changes,
+            depth:Math.min(before.depth,after.depth),match:'confirmed',userConfirmed:true,
+            comparisonHasInferred:row.comparisonHasInferred,
+            impact:{level:'review',reason:row.comparisonHasInferred?'reasonConfirmedInferred':'reasonConfirmedRename'}};
+          rows.push(combined);
+          continue
+        }
+        if(row.changes.includes('added')&&used.has(row.afterPath))continue;
+        rows.push(row)
+      }
+      return{...original,rows,summary:summarizeComparedRows(rows),automaticSummary:original.summary,
+        confirmedPairs:[...valid].map(([beforePath,afterPath])=>({beforePath,afterPath}))}
+    }
+    function renameCandidatesMarkup(){
+      if(!baseDiff||!lastDiff?.summary?.changed)return'';
+      const candidates=suggestRenameCandidates(baseDiff,confirmedRenames);
+      const confirmed=[...confirmedRenames].filter(([beforePath,afterPath])=>
+        lastDiff.confirmedPairs?.some(pair=>pair.beforePath===beforePath&&pair.afterPath===afterPath));
+      if(!candidates.length&&!confirmed.length)return'';
+      const confirmedMarkup=confirmed.map(([beforePath,afterPath])=>
+        `<div class="rename-candidate"><div class="rename-paths">${escapeHtml(beforePath)}<span>→</span>${escapeHtml(afterPath)} <span class="rename-confirmed">${escapeHtml(t('renameConfirmed'))}</span></div><button type="button" data-rename-undo="${escapeHtml(beforePath)}">${escapeHtml(t('renameUndo'))}</button></div>`).join('');
+      const candidatesMarkup=candidates.map(({beforePath,afterPath})=>
+        `<div class="rename-candidate"><div class="rename-paths">${escapeHtml(beforePath)}<span>→</span>${escapeHtml(afterPath)}</div><button type="button" data-rename-from="${escapeHtml(beforePath)}" data-rename-to="${escapeHtml(afterPath)}">${escapeHtml(t('renameConfirm'))}</button></div>`).join('');
+      return`<section class="rename-candidates" aria-label="${escapeHtml(t('renameTitle'))}"><h3>${escapeHtml(t('renameTitle'))}</h3><p>${escapeHtml(t('renameNote'))}</p>${confirmedMarkup}${candidatesMarkup}</section>`
+    }
     function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
     function delimiterLabel(value){if(value==='\t')return'TAB';if(value===' ')return'SPACE';return value||'?'}
     function sourceBadge(schema){const inferred=schema.source==='inferred';return `<span class="format-badge ${inferred?'inferred':''}">${escapeHtml(schema.format.toUpperCase())} · ${escapeHtml(t(inferred?'formatInferred':'formatDeclared'))}</span>`}
@@ -1173,8 +1249,8 @@
     function renderPendingResults(){if(lastDiff)return;const kind=pendingState(),copy=pendingCopy(kind);$('#reportToolbar').hidden=true;$('#resultsSub').textContent=t(copy[1]);$('#resultsBody').innerHTML=`<div class=\"empty-state\"><svg ${kind==='loading'?'class=\"loading-spinner\"':''} viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">${pendingIcon(kind)}</svg><h3>${escapeHtml(t(copy[0]))}</h3><p>${escapeHtml(t(copy[1]))}</p></div>`}
     function updateButtons(){$('#pageIntro').hidden=!!(state.before?.file||state.after?.file);const ready=comparable(),kind=pendingState();$('#compareButton').disabled=!ready;$('#mobileCompareButton').disabled=!ready;$('#swapButton').disabled=!canSwap();const readiness=$('#compareReadiness');readiness.className=`compare-readiness ${kind==='ready'?'ready':kind==='error'?'error':''}`;readiness.textContent=t({ready:'compareReady',loading:'compareLoading',error:'compareFixError',needBefore:'compareNeedBefore',needAfter:'compareNeedAfter',needBoth:'compareNeedBoth'}[kind]);const previewOpen=!!state.before?.preview?.open||!!state.after?.preview?.open,showMobile=ready&&!lastDiff&&!previewOpen;$('#mobileCompareBar').hidden=!showMobile;document.body.classList.toggle('mobile-action-visible',showMobile);if(!lastDiff)renderPendingResults()}
     async function setFile(side,file){if(!file)return;const current=++generation[side];state[side]={file,loading:true};lastDiff=null;renderSide(side);updateButtons();resetResults();try{const format=fileFormat(file);if(!format)throw Object.assign(new Error('unsupported file format'),{unsupported:true});const schema=await readSchema(file);if(current!==generation[side])return;state[side]={file,schema,preview:{open:false,loading:false,data:null,error:null}};renderSide(side)}catch(error){if(current!==generation[side])return;console.warn(error);state[side]={file,error:true,unsupported:!!error?.unsupported,message:String(error?.message||error)};renderSide(side);showToast(t('loadErrorToast'),'error')}updateButtons()}
-    function resetResults(){lastDiff=null;$('#reportToolbar').hidden=true;$('#fieldSearch').value='';$('#diffFilter').value='all';reportView.query='';reportView.filter='all';renderPendingResults()}
-    let lastDiff=null;const reportView={filter:'all',query:''};
+    function resetResults(){baseDiff=null;confirmedRenames.clear();lastDiff=null;$('#reportToolbar').hidden=true;$('#fieldSearch').value='';$('#diffFilter').value='all';reportView.query='';reportView.filter='all';renderPendingResults()}
+    let baseDiff=null,confirmedRenames=new Map();let lastDiff=null;const reportView={filter:'all',query:''};
     function pill(change){const map={added:['change-added','added'],removed:['change-removed','removed'],type:['change-type','typeChanged'],nullability:['change-nullability','nullabilityChanged'],decimal:['change-decimal','decimalChanged'],structure:['change-structure','structureChanged'],fieldId:['change-fieldid','fieldIdChanged'],renamed:['change-renamed','renamed'],same:['change-same','unchanged']},[cls,key]=map[change]||map.same;return `<span class="change-pill ${cls}">${escapeHtml(t(key))}</span>`}
     function pills(changes){const list=changes?.length?changes:['same'];return `<span class="change-list">${list.map(pill).join('')}</span>`}
     function schemaCell(field,showNormalized=false){if(!field)return `<span class="missing">${escapeHtml(t('missing'))}</span>`;const items=fieldMeta(field);if(showNormalized)items.unshift(t('normalizedType',{type:field.normalizedType||field.type}));const meta=items.map(item=>`<span>${escapeHtml(item)}</span>`).join('');return `<span class="schema-type-main">${escapeHtml(field.type)}</span>${meta?`<span class="schema-meta">${meta}</span>`:''}`}
@@ -1228,10 +1304,10 @@
     function markdownEscape(value){return String(value??'').replaceAll('\\','\\\\').replaceAll('|','\\|').replace(/\r?\n/g,' ')}
     function fieldReportText(field,crossFormat=false){if(!field)return '—';const parts=[field.type];if(crossFormat&&field.normalizedType&&field.normalizedType!==field.type)parts.push(`normalized: ${field.normalizedType}`);if(field.source==='declared'){if(field.repetition)parts.push(field.repetition);if(field.fieldId!==null&&field.fieldId!==undefined)parts.push(`Field ID: ${field.fieldId}`);if(field.decimal)parts.push(`p=${field.precision??'?'}, s=${field.scale??'?'}`)}else{parts.push('inferred');parts.push(field.observedNull?'NULL observed':'no NULL observed');if(field.missingTracked)parts.push(field.observedMissing?'missing observed':'no missing observed')}return parts.join(' · ')}
     function changedRows(diff){return diff.rows.filter(r=>r.changes?.length)}
-    function buildMarkdownReport(diff){const rows=changedRows(diff),s=diff.summary,beforeName=state.before?.file?.name||'Before',afterName=state.after?.file?.name||'After',lines=[`# Schema Diff`,``,`${t('reportGenerated')} · v${APP_CONFIG.version}`,``,`- Before: \`${markdownEscape(beforeName)}\` (${diff.before.format.toUpperCase()}, ${diff.before.source})`,`- After: \`${markdownEscape(afterName)}\` (${diff.after.format.toUpperCase()}, ${diff.after.source})`,``,`## ${t('reportSummary')}`,``,`| ${t('summaryAll')} | ${t('summaryAdded')} | ${t('summaryRemoved')} | ${t('summaryModified')} | ${t('impactBreaking')} | ${t('impactReview')} |`,`| ---: | ---: | ---: | ---: | ---: | ---: |`,`| ${s.fields} | ${s.added} | ${s.removed} | ${s.modified} | ${s.impacts.breaking} | ${s.impacts.review} |`,``,`## ${t('reportChanges')}`,``];if(!rows.length){lines.push(t('reportNoChanges'));return lines.join('\n')}lines.push(`| ${t('field')} | Before | After | ${t('impactSummaryTitle')} | ${t('change')} |`,`| --- | --- | --- | --- | --- |`);for(const row of rows){const impact=t(impactKey(row.impact?.level||'none')),reason=row.impact?.reason?t(row.impact.reason):'',change=(row.changes||[]).map(c=>t({added:'added',removed:'removed',type:'typeChanged',nullability:'nullabilityChanged',decimal:'decimalChanged',structure:'structureChanged',fieldId:'fieldIdChanged',renamed:'renamed'}[c]||'unchanged')).join(', ');lines.push(`| ${markdownEscape(fieldPathText(row))} | ${markdownEscape(fieldReportText(row.before,diff.crossFormat))} | ${markdownEscape(fieldReportText(row.after,diff.crossFormat))} | ${markdownEscape(reason?`${impact}: ${reason}`:impact)} | ${markdownEscape(change)} |`)}return lines.join('\n')}
+    function buildMarkdownReport(diff){const rows=changedRows(diff),s=diff.summary,beforeName=state.before?.file?.name||'Before',afterName=state.after?.file?.name||'After',lines=[`# Schema Diff`,``,`${t('reportGenerated')} · v${APP_CONFIG.version}`,``,`- Before: \`${markdownEscape(beforeName)}\` (${diff.before.format.toUpperCase()}, ${diff.before.source})`,`- After: \`${markdownEscape(afterName)}\` (${diff.after.format.toUpperCase()}, ${diff.after.source})`,``,`## ${t('reportSummary')}`,``,`| ${t('summaryAll')} | ${t('summaryAdded')} | ${t('summaryRemoved')} | ${t('summaryModified')} | ${t('impactBreaking')} | ${t('impactReview')} |`,`| ---: | ---: | ---: | ---: | ---: | ---: |`,`| ${s.fields} | ${s.added} | ${s.removed} | ${s.modified} | ${s.impacts.breaking} | ${s.impacts.review} |`,``,`## ${t('reportChanges')}`,``];if(!rows.length){lines.push(t('reportNoChanges'));return lines.join('\n')}lines.push(`| ${t('field')} | Before | After | ${t('impactSummaryTitle')} | ${t('change')} |`,`| --- | --- | --- | --- | --- |`);for(const row of rows){const impact=t(impactKey(row.impact?.level||'none')),reason=row.impact?.reason?t(row.impact.reason):'',change=(row.changes||[]).map(c=>t({added:'added',removed:'removed',type:'typeChanged',nullability:'nullabilityChanged',decimal:'decimalChanged',structure:'structureChanged',fieldId:'fieldIdChanged',renamed:'renamed'}[c]||'unchanged')).join(', ');lines.push(`| ${markdownEscape(fieldPathText(row))} | ${markdownEscape(fieldReportText(row.before,diff.crossFormat))} | ${markdownEscape(fieldReportText(row.after,diff.crossFormat))} | ${markdownEscape(reason?`${impact}: ${reason}`:impact)} | ${markdownEscape(change)} |`)}if(diff.confirmedPairs?.length){lines.push('','## '+t('renameExportNote'),'');for(const pair of diff.confirmedPairs)lines.push('- '+markdownEscape(pair.beforePath)+' → '+markdownEscape(pair.afterPath));lines.push('')}return lines.join('\n')}
     function primitiveField(field){if(!field)return null;return{path:field.path,type:field.type,normalizedType:field.normalizedType??field.type,kind:field.kind??null,source:field.source,repetition:field.repetition??null,nullable:field.nullable??null,observedNull:field.observedNull??null,observedMissing:field.observedMissing??null,fieldId:typeof field.fieldId==='bigint'?field.fieldId.toString():field.fieldId??null,precision:field.precision??null,scale:field.scale??null,logical:field.logical??null,physical:field.physical??null}}
     function sourceReport(side,diffSide){const entry=state[side],schema=diffSide,meta=schema.metadata||{};return{fileName:entry?.file?.name??null,fileSize:entry?.file?.size??null,format:schema.format,schemaSource:schema.source,rows:typeof meta.num_rows==='bigint'?meta.num_rows.toString():meta.num_rows??null,sampledRows:meta.sampled_rows??null,complete:meta.complete??null,bytesRead:schema.tracker?.bytes??null}}
-    function buildJsonReport(diff){return{schemaVersion:1,app:{name:'Schema Diff',version:APP_CONFIG.version},generatedAt:new Date().toISOString(),before:sourceReport('before',diff.before),after:sourceReport('after',diff.after),crossFormat:diff.crossFormat,summary:diff.summary,fields:diff.rows.map(row=>({path:row.path,beforePath:row.beforePath,afterPath:row.afterPath,match:row.match,changes:[...(row.changes||[])],impact:{level:row.impact?.level||'none',label:t(impactKey(row.impact?.level||'none')),reasonCode:row.impact?.reason??null,reason:row.impact?.reason?t(row.impact.reason):null},before:primitiveField(row.before),after:primitiveField(row.after)}))}}
+    function buildJsonReport(diff){return{schemaVersion:1,app:{name:'Schema Diff',version:APP_CONFIG.version},generatedAt:new Date().toISOString(),automaticSummary:diff.automaticSummary??null,manuallyConfirmedRenames:diff.confirmedPairs??[],before:sourceReport('before',diff.before),after:sourceReport('after',diff.after),crossFormat:diff.crossFormat,summary:diff.summary,fields:diff.rows.map(row=>({path:row.path,beforePath:row.beforePath,afterPath:row.afterPath,match:row.match,userConfirmed:row.userConfirmed===true,changes:[...(row.changes||[])],impact:{level:row.impact?.level||'none',label:t(impactKey(row.impact?.level||'none')),reasonCode:row.impact?.reason??null,reason:row.impact?.reason?t(row.impact.reason):null},before:primitiveField(row.before),after:primitiveField(row.after)}))}}
     function safeStem(name){return String(name||'').replace(/\.[^.]+$/,'').normalize('NFKC').replace(/[<>:"/\\|?*\x00-\x1f]+/g,'-').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^[-. ]+|[-. ]+$/g,'').slice(0,44)||'schema'}
     function outputFilename(ext){const before=safeStem(state.before?.file?.name||'before'),after=safeStem(state.after?.file?.name||'after');return `${before}-to-${after}-schema-diff.${ext}`}
     function downloadText(filename,text,mime){const url=URL.createObjectURL(new Blob([text],{type:mime})),a=document.createElement('a');a.href=url;a.download=filename;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0)}
@@ -1240,11 +1316,25 @@
 
 
     for(const side of ['before','after']){const drop=$(`#${side}Drop`),input=$(`#${side}Input`);drop.addEventListener('click',e=>{const toggle=e.target.closest('[data-preview-toggle]'),retry=e.target.closest('[data-preview-retry]');if(toggle){e.stopPropagation();togglePreview(side);return}if(retry){e.stopPropagation();togglePreview(side,{retry:true});return}if(e.target.closest('[data-choose]')||e.target===drop||!state[side])input.click()});drop.addEventListener('keydown',e=>{if(e.target.closest('button'))return;if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click()}});input.addEventListener('change',()=>setFile(side,input.files?.[0]));for(const type of ['dragenter','dragover'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.add('drag')});for(const type of ['dragleave','drop'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.remove('drag')});drop.addEventListener('drop',e=>setFile(side,e.dataTransfer?.files?.[0]))}
-    function runCompare(){if(!comparable())return;renderResults(diffSchemas(state.before.schema,state.after.schema));showToast(t('compareDone'));const reduce=matchMedia?.('(prefers-reduced-motion: reduce)').matches;$('#resultsTitle').scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'})}
+    function runCompare(){if(!comparable())return;confirmedRenames.clear();baseDiff=diffSchemas(state.before.schema,state.after.schema);renderResults(baseDiff);showToast(t('compareDone'));const reduce=matchMedia?.('(prefers-reduced-motion: reduce)').matches;$('#resultsTitle').scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'})}
     $('#compareButton').addEventListener('click',runCompare);
     $('#mobileCompareButton').addEventListener('click',runCompare);
-    $('#swapButton').addEventListener('click',()=>{if(!canSwap())return;const hadResult=!!lastDiff,b=state.before,a=state.after;state.before=a;state.after=b;generation.before++;generation.after++;renderSide('before');renderSide('after');updateButtons();if(hadResult&&comparable()){renderResults(diffSchemas(state.before.schema,state.after.schema));showToast(t('swappedCompared'))}else resetResults()});
+    $('#swapButton').addEventListener('click',()=>{if(!canSwap())return;const hadResult=!!lastDiff,b=state.before,a=state.after;state.before=a;state.after=b;generation.before++;generation.after++;renderSide('before');renderSide('after');updateButtons();if(hadResult&&comparable()){confirmedRenames.clear();baseDiff=diffSchemas(state.before.schema,state.after.schema);renderResults(baseDiff);showToast(t('swappedCompared'))}else resetResults()});
     $('#resultsBody').addEventListener('click',e=>{
+      const confirm=e.target.closest('button[data-rename-from]');
+      if(confirm&&baseDiff){
+        const from=confirm.dataset.renameFrom,to=confirm.dataset.renameTo;
+        if(suggestRenameCandidates(baseDiff,confirmedRenames).some(item=>item.beforePath===from&&item.afterPath===to)){
+          confirmedRenames.set(from,to);reportView.filter='renamed';reportView.query='';
+          renderResults(applyConfirmedRenames(baseDiff,confirmedRenames))
+        }
+        return
+      }
+      const undo=e.target.closest('button[data-rename-undo]');
+      if(undo&&baseDiff){
+        confirmedRenames.delete(undo.dataset.renameUndo);reportView.filter='all';reportView.query='';
+        renderResults(applyConfirmedRenames(baseDiff,confirmedRenames));return
+      }
       const filter=e.target.closest('button[data-summary-filter]');
       if(filter&&lastDiff){reportView.filter=filter.dataset.summaryFilter;reportView.query='';renderResults(lastDiff);const result=$('#resultRows');if(result)result.scrollIntoView({block:'start',behavior:matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});return}
     });
