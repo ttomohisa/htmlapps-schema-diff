@@ -2,7 +2,7 @@
 
 バージョン: v1.0.5
 
-ヘッダーの言語切り替えは EN / JA で統一し、切り替え先とヘルプの説明は表示言語に合わせます。バージョンは vMAJOR.MINOR.PATCH 形式で、バッジは「完全ローカル処理」/「Fully local processing」のままです。
+ヘッダーの言語切り替えは EN / JA で統一し、切り替え先とヘルプの説明は表示言語に合わせます。バージョンは vMAJOR.MINOR.PATCH 形式です。「完全ローカル処理」/「Fully local processing」のバッジはPC表示に残し、スマホ表示では非表示にします。
 
 [![GitHub Pages](https://github.com/ttomohisa/htmlapps-schema-diff/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/ttomohisa/htmlapps-schema-diff/actions/workflows/deploy-pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -35,6 +35,8 @@ GitHub Pages版では最初のHTML配信だけが発生し、その後に選択�
 - **検索・フィルター・レポート** — field path検索、表示フィルター、Markdownコピー、Markdown / JSON保存に対応します。
 - **PC / スマートフォン対応** — プレビュー内スクロール、タップしやすい操作、日本語 / 英語UI、ページ全体の横スクロールを起こさないレイアウトを重視しています。
 - **完全ローカル処理の単一HTML** — 登録・インストール不要。CSPで実行時通信を禁止し、ローカルHTMLとして直接開けます。
+
+`main` に未公開のアプリバージョンをマージし、ビルドと検査が成功すると、対応するタグとGitHub Releaseを自動作成します。Releaseには通常版と自己展開版の単一HTMLを添付し、公開済みバージョンは再作成しません。
 
 ## すぐに使う
 

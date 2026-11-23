@@ -2,7 +2,7 @@
 
 Version: v1.0.5
 
-The header uses EN / JA language targets with localized accessible names and Help titles; the version follows vMAJOR.MINOR.PATCH. The local-processing badge remains 完全ローカル処理 / Fully local processing.
+The header uses EN / JA language targets with localized accessible names and Help titles; the version follows vMAJOR.MINOR.PATCH. The local-processing badge appears on PC and is hidden in mobile layouts.
 
 [![GitHub Pages](https://github.com/ttomohisa/htmlapps-schema-diff/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/ttomohisa/htmlapps-schema-diff/actions/workflows/deploy-pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -35,6 +35,8 @@ GitHub Pages delivers the initial HTML. After it loads, selected files are read 
 - **Search, filter, and export** — Search field paths, filter the on-screen comparison, copy Markdown, or save Markdown / JSON reports.
 - **Desktop and mobile UI** — Responsive layouts, contained preview scrolling, touch-friendly actions, Japanese / English UI, and no intended page-level horizontal scrolling.
 - **Fully local single-HTML operation** — No account or installation is required, runtime network connections are blocked by CSP, and the app can be opened directly as a local HTML file.
+
+When a validated merge to `main` introduces an unreleased app version, the release workflow creates the corresponding SemVer tag and GitHub Release with both standalone HTML variants. Existing releases are not recreated.
 
 ## Quick start
 
