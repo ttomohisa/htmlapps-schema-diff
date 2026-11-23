@@ -491,3 +491,66 @@ test('JSONL preview ignores inherited object properties in missing cells', () =>
   assert.match(markup,/>yes</);
   assert.doesNotMatch(markup,/function Object|function toString/);
 });
+
+
+test('similar column names are suggestions until the user confirms a pairing', async () => {
+  const c=runtime();
+  const before=await c.readSchema(csv('customer_id,status_code\n1,2\n','before.csv'));
+  const after=await c.readSchema(csv('customerId,status_code\n1,2\n','after.csv'));
+  const automatic=c.diffSchemas(before,after);
+  assert.equal(automatic.summary.added,1);
+  assert.equal(automatic.summary.removed,1);
+  assert.equal(automatic.summary.renamed,0);
+  assert.ok(c.suggestRenameCandidates(automatic).some(p=>p.beforePath==='customer_id'&&p.afterPath==='customerId'));
+  assert.equal(automatic.summary.changed,2,'suggestions do not change the automatic comparison');
+  const adjusted=c.applyConfirmedRenames(automatic,new Map([['customer_id','customerId']]));
+  assert.equal(adjusted.summary.added,0);
+  assert.equal(adjusted.summary.removed,0);
+  assert.equal(adjusted.summary.modified,1);
+  assert.equal(adjusted.summary.renamed,1);
+  assert.equal(adjusted.summary.changed,1);
+  assert.equal(adjusted.summary.impacts.review,1);
+  assert.equal(adjusted.summary.fields,automatic.summary.fields-1);
+  assert.equal(automatic.summary.changed,2,'original comparison is unchanged');
+  assert.equal(adjusted.automaticSummary,automatic.summary);
+  const pair=adjusted.rows.find(row=>row.userConfirmed);
+  assert.equal(pair.match,'confirmed');
+  assert.deepEqual(plain(pair.changes),['renamed']);
+  assert.equal(pair.impact.reason,'reasonConfirmedInferred');
+  assert.equal(c.applyConfirmedRenames(automatic,new Map()),automatic,'Undo restores the original result');
+  c.state.before={file:csv('customer_id,status_code\n1,2\n','before.csv'),schema:before};
+  c.state.after={file:csv('customerId,status_code\n1,2\n','after.csv'),schema:after};
+  const exportJson=c.buildJsonReport(adjusted);
+  assert.equal(exportJson.automaticSummary.changed,2);
+  assert.deepEqual(plain(exportJson.manuallyConfirmedRenames),[{beforePath:'customer_id',afterPath:'customerId'}]);
+  assert.equal(exportJson.fields.filter(row=>row.userConfirmed).length,1);
+  assert.match(c.buildMarkdownReport(adjusted),/customer_id → customerId/);
+});
+test('candidate matching rejects unrelated names, type changes and conflicting Field IDs', async () => {
+  const c=runtime();
+  const typed=c.diffSchemas(
+    await c.readSchema(csv('customer_id,extra_thing\n1,2\n','before.csv')),
+    await c.readSchema(csv('customerId,other_name\nhello,2\n','after.csv'))
+  );
+  assert.equal(c.suggestRenameCandidates(typed).length,0);
+  const same=c.diffSchemas(
+    await c.readSchema(csv('customer_id\n1\n','before.csv')),
+    await c.readSchema(csv('customerId\n1\n','after.csv'))
+  );
+  same.rows.find(row=>row.before).before.fieldId=5;
+  same.rows.find(row=>row.after).after.fieldId=6;
+  assert.equal(c.suggestRenameCandidates(same).length,0);
+});
+test('one-to-one rename pairing cannot consume the same new field twice', async () => {
+  const c=runtime();
+  const before=await c.readSchema(csv('customer_id,account_number,keep\n1,1,3\n','before.csv'));
+  const after=await c.readSchema(csv('customerId,accountNumber,keep\n1,1,3\n','after.csv'));
+  const original=c.diffSchemas(before,after);
+  const modified=c.applyConfirmedRenames(original,new Map([
+    ['customer_id','customerId'],
+    ['account_number','customerId']
+  ]));
+  assert.equal(modified.confirmedPairs.length,1);
+  assert.equal(modified.rows.find(row=>row.beforePath==='keep').changes.length,0);
+  assert.equal(modified.summary.changed,original.summary.changed-1);
+});
