@@ -591,41 +591,47 @@
     .filter-empty { padding: 28px 20px 34px; border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent); text-align: center; }
     .filter-empty strong { display: block; margin-bottom: 3px; font-size: 13px; }
     .filter-empty span { color: var(--muted); font-size: 11px; }
-    /* One continuous result surface with dividers instead of nested metric cards. */
-    .summary, .impact-summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0;
-      margin-inline: 28px;
+    /* Compact comparison overview: one readable line of counts, then only relevant impacts. */
+    .result-overview {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 20px;
+      row-gap: 8px;
+      padding: 15px 20px 13px;
     }
-    .summary { padding: 24px 0 26px; }
-    .summary-card, .impact-card {
+    .result-overview-item {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      white-space: nowrap;
       min-width: 0;
-      min-height: 70px;
-      padding: 4px 18px 4px 26px;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
     }
-    .summary-card:first-child, .impact-card:first-child { padding-left: 0; }
-    .summary-card + .summary-card, .impact-card + .impact-card {
-      border-left: 1px solid var(--line);
-    }
-    .summary-value, .impact-value {
-      display: block;
-      font-size: 24px;
-      font-weight: 750;
-      line-height: 1.2;
+    .result-overview-item strong {
+      font-size: 17px;
+      font-weight: 760;
       font-variant-numeric: tabular-nums;
+      line-height: 1.3;
     }
-    .summary-label, .impact-label {
-      display: block;
-      margin-top: 9px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-      overflow-wrap: anywhere;
+    .result-overview-item span { color: var(--muted); font-size: 12px; }
+    .result-overview-total { margin-right: 2px; padding-right: 22px; border-right: 1px solid var(--line); }
+    .impact-overview {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 18px;
+      row-gap: 7px;
+      margin: 0 20px 14px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
     }
+    .impact-overview-title { color: var(--muted); font-size: 11px; font-weight: 650; }
+    .impact-overview-item { display: inline-flex; align-items: baseline; gap: 5px; font-size: 11px; }
+    .impact-overview-item strong { font-size: 13px; font-weight: 780; font-variant-numeric: tabular-nums; }
+    .impact-overview-item.is-breaking { color: var(--danger); }
+    .impact-overview-item.is-review { color: #76520b; }
+    .impact-overview-item.is-compatible { color: var(--accent); }
+    .impact-overview-item.is-info, .impact-overview-item.is-zero { color: var(--muted); }
     .empty-state { padding: 38px 20px 42px; border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent); text-align: center; }
     .empty-state svg { width: 42px; height: 42px; margin-bottom: 7px; color: var(--line-strong); }
     .empty-state h3 { margin: 0 0 4px; font-size: 14px; }
@@ -657,8 +663,6 @@
     .change-fieldid { color: #545861; background: #eceef1; }
     .change-renamed { color: #315b87; background: #e8f0f8; }
     .change-same { color: var(--muted); background: var(--surface-muted); }
-    .impact-summary { padding: 24px 0 30px; border-top: 1px solid var(--line); }
-    .impact-label { font-weight: 600; }
     .impact-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid transparent; border-radius: 999px; font-size: 10px; font-weight: 780; line-height: 1.2; white-space: nowrap; }
     .impact-badge::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
     .impact-breaking { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 24%, var(--line)); background: #fff4f2; }
@@ -666,9 +670,6 @@
     .impact-compatible { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 24%, var(--line)); background: var(--accent-soft); }
     .impact-info { color: #545861; border-color: var(--line); background: var(--surface-muted); }
     .impact-none { color: var(--muted); border-color: var(--line); background: var(--surface-muted); }
-    /* Keep impact-number colors but not filled or bordered inner cards. Row badges stay unchanged. */
-    .impact-summary .impact-card { background: transparent; }
-    .impact-summary .impact-label { color: var(--muted); }
     .impact-detail { display: grid; gap: 5px; margin-top: 6px; }
     .impact-reason { color: var(--muted); font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
     .mobile-diffs { display: none; }
@@ -715,12 +716,11 @@
       .report-toolbar { position: static; padding-top: 0; border-top: 0; backdrop-filter: none; }
       .table-wrap { display: none; }
       .mobile-diffs { display: block; }
-      .summary, .impact-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 0; row-gap: 22px; margin-inline: 18px; }
-      .summary-card, .impact-card { min-height: 72px; padding: 3px 12px 3px 18px; }
-      .summary-card:nth-child(odd), .impact-card:nth-child(odd) { padding-left: 0; border-left: 0; }
-      .summary-card:nth-child(even), .impact-card:nth-child(even) { border-left: 1px solid var(--line); }
-      .summary-value, .impact-value { font-size: 23px; }
-      .summary-label, .impact-label { margin-top: 7px; font-size: 11px; }
+      .result-overview { padding: 12px 14px 11px; gap: 7px 15px; }
+      .result-overview-total { padding-right: 15px; }
+      .result-overview-item strong { font-size: 16px; }
+      .result-overview-item span { font-size: 11px; }
+      .impact-overview { margin: 0 14px 12px; gap: 6px 12px; padding-top: 9px; }
       .results-head { padding-inline: 14px; }
       .report-toolbar { padding-inline: 14px; align-items: stretch; flex-direction: column; }
       .report-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .55fr); }
@@ -1162,7 +1162,34 @@
     function impactDetail(row){return `<div class="impact-detail">${impactBadge(row.impact)}${row.impact?.reason?`<span class="impact-reason">${escapeHtml(t(row.impact.reason))}</span>`:''}${pills(row.changes)}</div>`}
     function rowMatchesView(row){const q=reportView.query.trim().toLocaleLowerCase();if(q){const hay=[row.path,row.beforePath,row.afterPath].filter(Boolean).join('\n').toLocaleLowerCase();if(!hay.includes(q))return false}switch(reportView.filter){case'changed':return !!row.changes?.length;case'added':return row.changes?.includes('added');case'removed':return row.changes?.includes('removed');case'renamed':return row.changes?.includes('renamed');case'type':return row.changes?.includes('type');case'breaking':return row.impact?.level==='breaking';case'review':return row.impact?.level==='review';default:return true}}
     function renderVisibleRows(){if(!lastDiff)return;const rows=lastDiff.rows.filter(rowMatchesView),crossFormat=!!lastDiff.crossFormat,total=lastDiff.rows.length;$('#visibleCount').textContent=t('visibleCount',{visible:formatNumber(rows.length),total:formatNumber(total)});const host=$('#resultRows');if(!host)return;if(!rows.length){host.innerHTML=`<div class="filter-empty"><strong>${escapeHtml(t('filterEmptyTitle'))}</strong><span>${escapeHtml(t('filterEmptyBody'))}</span></div>`;return}const tableRows=rows.map(r=>`<tr><td class="field-cell">${fieldPathCell(r)}</td><td class="type-cell">${schemaCell(r.before,crossFormat)}</td><td class="type-cell">${schemaCell(r.after,crossFormat)}</td><td>${impactDetail(r)}</td></tr>`).join(''),mobileRows=rows.map(r=>`<article class="mobile-diff"><div class="mobile-diff-top"><span class="mobile-field">${fieldPathCell(r)}</span>${impactBadge(r.impact)}</div><div class="mobile-types"><div class="mobile-type-box"><span class="mobile-type-label">Before</span><span class="mobile-type-value">${schemaCell(r.before,crossFormat)}</span></div><span class="arrow">→</span><div class="mobile-type-box"><span class="mobile-type-label">After</span><span class="mobile-type-value">${schemaCell(r.after,crossFormat)}</span></div></div><div class="impact-detail">${r.impact?.reason?`<span class="impact-reason">${escapeHtml(t(r.impact.reason))}</span>`:''}${pills(r.changes)}</div></article>`).join('');host.innerHTML=`<div class="table-wrap"><table class="diff-table"><thead><tr><th style="width:26%">${escapeHtml(t('field'))}</th><th style="width:23%">Before</th><th style="width:23%">After</th><th style="width:28%">${escapeHtml(t('impactSummaryTitle'))}</th></tr></thead><tbody>${tableRows}</tbody></table></div><div class="mobile-diffs">${mobileRows}</div>`}
-    function renderResults(diff){lastDiff=diff;$('#reportToolbar').hidden=false;const {summary}=diff,crossFormat=!!diff.crossFormat,baseSub=summary.changed===0?t('comparedCount',{count:formatNumber(summary.fields)}):t('changedCount',{count:formatNumber(summary.changed)});$('#resultsSub').textContent=crossFormat?`${baseSub} · ${t('normalizedComparison',{before:diff.before.format.toUpperCase(),after:diff.after.format.toUpperCase()})}`:baseSub;const summaryHtml=`<div class="summary"><div class="summary-card"><span class="summary-value">${formatNumber(summary.fields)}</span><span class="summary-label">${escapeHtml(t('summaryAll'))}</span></div><div class="summary-card"><span class="summary-value">${formatNumber(summary.added)}</span><span class="summary-label">${escapeHtml(t('summaryAdded'))}</span></div><div class="summary-card"><span class="summary-value">${formatNumber(summary.removed)}</span><span class="summary-label">${escapeHtml(t('summaryRemoved'))}</span></div><div class="summary-card"><span class="summary-value">${formatNumber(summary.modified)}</span><span class="summary-label">${escapeHtml(t('summaryModified'))}</span></div></div>`,impactHtml=summary.changed?`<div class="impact-summary" aria-label="${escapeHtml(t('impactSummaryTitle'))}"><div class="impact-card impact-breaking"><span class="impact-value">${formatNumber(summary.impacts.breaking)}</span><span class="impact-label">${escapeHtml(t('impactBreaking'))}</span></div><div class="impact-card impact-review"><span class="impact-value">${formatNumber(summary.impacts.review)}</span><span class="impact-label">${escapeHtml(t('impactReview'))}</span></div><div class="impact-card impact-compatible"><span class="impact-value">${formatNumber(summary.impacts.compatible)}</span><span class="impact-label">${escapeHtml(t('impactCompatible'))}</span></div><div class="impact-card impact-info"><span class="impact-value">${formatNumber(summary.impacts.info)}</span><span class="impact-label">${escapeHtml(t('impactInfo'))}</span></div></div>`:'';if(summary.changed===0){reportView.filter='all';reportView.query=''}$('#diffFilter').value=reportView.filter;$('#fieldSearch').value=reportView.query;$('#diffFilter').disabled=summary.changed===0;$('#fieldSearch').disabled=summary.changed===0;if(summary.changed===0){$('#visibleCount').textContent=t('fields',{count:formatNumber(summary.fields)});$('#resultsBody').innerHTML=summaryHtml+`<div class="empty-state"><h3>${escapeHtml(t('sameTitle'))}</h3><p>${escapeHtml(t('sameBody'))}</p></div>`;updateButtons();return}$('#resultsBody').innerHTML=summaryHtml+impactHtml+`<div id="resultRows"></div>`;renderVisibleRows();updateButtons()}
+    function renderResults(diff){
+      lastDiff=diff;
+      $('#reportToolbar').hidden=false;
+      const {summary}=diff,crossFormat=!!diff.crossFormat;
+      const baseSub=summary.changed===0?t('comparedCount',{count:formatNumber(summary.fields)}):t('changedCount',{count:formatNumber(summary.changed)});
+      $('#resultsSub').textContent=crossFormat?`${baseSub} · ${t('normalizedComparison',{before:diff.before.format.toUpperCase(),after:diff.after.format.toUpperCase()})}`:baseSub;
+      const metric=(value,label,extra='')=>`<span class="result-overview-item ${extra}"><strong>${formatNumber(value)}</strong><span>${escapeHtml(t(label))}</span></span>`;
+      const summaryHtml=`<div class="result-overview" aria-label="${escapeHtml(t('reportSummary'))}">${metric(summary.fields,'summaryAll','result-overview-total')}${metric(summary.added,'summaryAdded')}${metric(summary.removed,'summaryRemoved')}${metric(summary.modified,'summaryModified')}</div>`;
+      let impactHtml='';
+      if(summary.changed){
+        const impactOrder=[['breaking','impactBreaking'],['review','impactReview'],['compatible','impactCompatible'],['info','impactInfo']];
+        const relevant=impactOrder.filter(([key])=>summary.impacts[key]>0);
+        // A zero breaking count is useful context; the other zero categories add only noise.
+        if(summary.impacts.breaking===0)relevant.push(['breaking','impactBreaking']);
+        const impactItems=relevant.map(([key,label])=>`<span class="impact-overview-item is-${summary.impacts[key]?'': 'zero'}${summary.impacts[key]?key:''}"><span>${escapeHtml(t(label))}</span><strong>${formatNumber(summary.impacts[key])}</strong></span>`).join('');
+        impactHtml=`<div class="impact-overview" aria-label="${escapeHtml(t('impactSummaryTitle'))}"><span class="impact-overview-title">${escapeHtml(t('impactSummaryTitle'))}</span>${impactItems}</div>`;
+      }
+      if(summary.changed===0){reportView.filter='all';reportView.query=''}
+      $('#diffFilter').value=reportView.filter;$('#fieldSearch').value=reportView.query;
+      $('#diffFilter').disabled=summary.changed===0;$('#fieldSearch').disabled=summary.changed===0;
+      if(summary.changed===0){
+        $('#visibleCount').textContent=t('fields',{count:formatNumber(summary.fields)});
+        $('#resultsBody').innerHTML=summaryHtml+`<div class="empty-state"><h3>${escapeHtml(t('sameTitle'))}</h3><p>${escapeHtml(t('sameBody'))}</p></div>`;
+        updateButtons();return
+      }
+      $('#resultsBody').innerHTML=summaryHtml+impactHtml+`<div id="resultRows"></div>`;
+      renderVisibleRows();updateButtons()
+    }
     function markdownEscape(value){return String(value??'').replaceAll('\\','\\\\').replaceAll('|','\\|').replace(/\r?\n/g,' ')}
     function fieldReportText(field,crossFormat=false){if(!field)return '—';const parts=[field.type];if(crossFormat&&field.normalizedType&&field.normalizedType!==field.type)parts.push(`normalized: ${field.normalizedType}`);if(field.source==='declared'){if(field.repetition)parts.push(field.repetition);if(field.fieldId!==null&&field.fieldId!==undefined)parts.push(`Field ID: ${field.fieldId}`);if(field.decimal)parts.push(`p=${field.precision??'?'}, s=${field.scale??'?'}`)}else{parts.push('inferred');parts.push(field.observedNull?'NULL observed':'no NULL observed');if(field.missingTracked)parts.push(field.observedMissing?'missing observed':'no missing observed')}return parts.join(' · ')}
     function changedRows(diff){return diff.rows.filter(r=>r.changes?.length)}
