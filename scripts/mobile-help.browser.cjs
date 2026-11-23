@@ -16,7 +16,8 @@ async function prepareApp(page, width, label) {
   assert.equal(await page.locator('#mobileCompareBar').isVisible(),width<=820,label+': ready comparison action preserved');
 }
 async function smoke(page, results, file) {
-  await page.locator('#mobileCompareButton').click();await page.locator('#reportToolbar').waitFor();
+  if (await page.locator('#mobileCompareButton').isVisible()) await page.locator('#mobileCompareButton').click();
+  await page.locator('#reportToolbar').waitFor();
   assert.equal(await page.locator('#mobileCompareBar').isVisible(),false,'finished comparison action hidden');
   const downloadPromise=page.waitForEvent('download');await page.locator('#saveJsonButton').click();const download=await downloadPromise;
   assert.equal(download.suggestedFilename(),'before-to-after-schema-diff.json');
@@ -45,13 +46,25 @@ async function main() {
             await page.locator('#helpButton').waitFor();
             if (await page.locator('html').getAttribute('lang') !== language) await page.locator('#languageButton').click();
             assert.equal(await page.locator('[data-i18n="localBadge"]').textContent(), language === 'en' ? 'Fully local processing' : '完全ローカル処理', label);
-            assert.ok(await page.locator('.local-badge').evaluate(el => {
-              const box = el.getBoundingClientRect();
-              const range = document.createRange();
-              range.selectNodeContents(el.querySelector('[data-i18n="localBadge"]'));
-              return box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 1
-                && [...range.getClientRects()].every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1);
-            }), label + ': badge text fits');
+            if (width <= 820) {
+              assert.equal(await page.locator('.local-badge').isVisible(), false, label + ': badge hidden on mobile');
+            } else {
+              assert.ok(await page.locator('.local-badge').evaluate(el => {
+                const box = el.getBoundingClientRect();
+                const range = document.createRange();
+                range.selectNodeContents(el.querySelector('[data-i18n="localBadge"]'));
+                return box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 1
+                  && [...range.getClientRects()].every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1);
+              }), label + ': badge text fits');
+            }
+            assert.equal(await page.locator('.page-intro h1:not(.sr-only)').count(), 0, label + ': no visible hero heading');
+            assert.match(await page.locator('.page-intro [data-i18n="lead"]').innerText(), language === 'ja' ? /2つのファイルのスキーマ/ : /two file schemas/i, label + ': short hero copy');
+            assert.equal(await page.locator('[data-i18n="workspaceBody"]').count(), 0, label + ': removed duplicated file instructions');
+            if (width > 520) assert.equal(await page.locator('.brand-meta').innerText(), language === 'ja'
+              ? 'Parquet / CSV / TSV / JSONL スキーマ比較'
+              : 'Parquet / CSV / TSV / JSONL schema comparison', label + ': header metadata');
+            assert.equal(await page.locator('.inference-settings').evaluate(el => getComputedStyle(el).borderTopWidth), '0px', label + ': borderless inference settings');
+            assert.match(await page.locator('#beforeContent .drop-icon path').first().getAttribute('d'), /^M12 3v12/, label + ': drop arrow points downward');
             assert.equal(await page.locator('main #buildVersion').count(), 0, label);
             assert.equal(await page.locator('footer').isVisible(), width > 820, label);
             await prepareApp(page, width, label);
@@ -102,6 +115,42 @@ async function main() {
             await page.mouse.click(2, 1);
             assert.equal(await page.locator('#helpDialog').isVisible(), false, label + ': backdrop');
             if (file !== 'schema-diff.html' && language === 'ja' && width === 360) await smoke(page, results, file);
+            if ([1360, 821, 820, 360, 320].includes(width)) {
+              if (!(await page.locator('#reportToolbar').isVisible())) {
+                await page.locator(width <= 820 ? '#mobileCompareButton' : '#compareButton').click();
+                await page.locator('#reportToolbar').waitFor();
+              }
+              const geometry = await page.evaluate(() => {
+                const inspect = selector => {
+                  const area = document.querySelector(selector);
+                  const box = area.getBoundingClientRect();
+                  const cards = [...area.children].map(node => node.getBoundingClientRect());
+                  const style = getComputedStyle(area);
+                  return { gap: Number.parseFloat(style.columnGap), rowGap: Number.parseFloat(style.rowGap),
+                    left:box.left, right:box.right,
+                    cards:cards.map(c => ({left:c.left,right:c.right,top:c.top,bottom:c.bottom})) };
+                };
+                return { summary:inspect('.summary'), impact:inspect('.impact-summary'),
+                  pageWidth:document.documentElement.scrollWidth };
+              });
+              const cols = width <= 620 ? 2 : 4;
+              for (const [kind, area] of Object.entries({ summary: geometry.summary, impact: geometry.impact })) {
+                assert.ok(area.gap >= 10 && area.rowGap >= 10, label + ': ' + kind + ' gaps');
+                assert.equal(new Set(area.cards.map(c => Math.round(c.top))).size, width <= 620 ? 2 : 1, label + ': ' + kind + ' rows');
+                for (let i = 0; i < area.cards.length; i++) {
+                  const card = area.cards[i];
+                  assert.ok(card.left >= area.left - 1 && card.right <= area.right + 1
+                    && card.left >= -1 && card.right <= width + 1, label + ': ' + kind + ' cards within viewport');
+                  assert.ok(card.bottom - card.top >= 76, label + ': ' + kind + ' card height');
+                  if (i > 0 && i % cols !== 0)
+                    assert.ok(card.left - area.cards[i - 1].right >= 9, label + ': ' + kind + ' card separation');
+                }
+              }
+              assert.ok(geometry.impact.cards[0].top - geometry.summary.cards.at(-1).bottom >= 15, label + ': separated summary groups');
+              assert.ok(geometry.pageWidth <= width, label + ': summary creates no page overflow');
+              if (file === 'dist/index.html' && [1360, 360].includes(width))
+                await page.screenshot({path:path.join(results, `results-${language}-${width}.png`), fullPage:true});
+            }
             assert.deepEqual(errors, [], label + ': console errors');
             assert.deepEqual(requests, [], label + ': external runtime requests');
             console.log('PASS ' + label);
