@@ -10,7 +10,7 @@
 - Read Parquet preview rows across row groups; preserve unsigned numbers and null/empty collection distinctions.
 - Avoid inherited JavaScript property values in JSONL preview cells.
 - Add parser, comparison and preview regression tests.
-- Replace boxed summary and compatibility metrics with full-width, unboxed columns and subtle divider lines on PC and mobile, retaining one result-container boundary. Remove repeated no-difference copy. Shorten the introductory and header copy, hide the mobile local-processing badge, point file-drop arrows downward, and remove redundant workspace and inference-frame chrome.
+- Condense the results into one inline row of four comparison counts and a short compatibility line that prioritizes nonzero categories (with potentially breaking changes at zero shown as secondary context); keep full statistics in exports. Remove repeated no-difference copy. Shorten the introductory and header copy, hide the mobile local-processing badge, point file-drop arrows downward, and remove redundant workspace and inference-frame chrome.
 - Publish the validated standalone and self-extract variants as versioned GitHub Release assets with an idempotent tag when the PR is merged into main.
 - Remove redundant OLD/NEW file labels, hide the introduction and local-processing badge after a file is selected, and present loaded-file preview and replacement actions as accessible underlined text links instead of outlined buttons.
 
