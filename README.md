@@ -1,6 +1,6 @@
 # Schema Diff
 
-Version: v1.0.5
+Version: v1.1.0
 
 The header uses EN / JA language targets with localized accessible names and Help titles; the version follows vMAJOR.MINOR.PATCH. The local-processing badge appears on PC and is hidden in mobile layouts.
 
@@ -32,7 +32,8 @@ GitHub Pages delivers the initial HTML. After it loads, selected files are read 
 - **Compatibility guidance** — Changes are labeled Potentially breaking, Review, Likely compatible, or Info with an explanation rather than a universal safe/broken claim.
 - **First 10 rows preview** — Open a lazy, independent preview for Before or After. Row data is not read until the preview is requested.
 - **Inference controls** — Use 20,000, 100,000, or all rows/objects; CSV / TSV also support header auto-detection or manual override.
-- **Search, filter, and export** — Search field paths, filter the on-screen comparison, copy Markdown, or save Markdown / JSON reports.
+- **Search, filter, and export** — Click a nonzero result count to filter matching fields, search field paths, copy Markdown, or save Markdown / JSON reports.
+- **Why review? / suggested renames** — Read review guidance and optionally confirm or undo similarly named column pairs. Suggestions are never automatic renames.
 - **Desktop and mobile UI** — Responsive layouts, contained preview scrolling, touch-friendly actions, Japanese / English UI, and no intended page-level horizontal scrolling.
 - **Fully local single-HTML operation** — No account or installation is required, runtime network connections are blocked by CSP, and the app can be opened directly as a local HTML file.
 
@@ -68,7 +69,7 @@ Schema Diff currently has no package entries in `dependencies.json`; the Parquet
 2. For CSV / TSV / JSONL / NDJSON, adjust the inference row limit if needed. CSV / TSV also provide header controls.
 3. Optionally select the **Preview first 10 rows** text link on either file to verify the data being compared, or use **Replace file** to select another input. The preview is independent from schema comparison.
 4. Select **Compare schemas**.
-5. Review the summary, field-path changes, original/normalized types, and compatibility guidance.
+5. Review summary counts and impact guidance; select a nonzero number to filter the fields. If names are suggested as renames, confirm only the pairs you know refer to the same field, and undo if necessary.
 6. Use field-path search or the display filter to investigate the result.
 7. Use **Copy result**, **Save Markdown**, or **Save JSON** when you need to keep or process the full comparison.
 

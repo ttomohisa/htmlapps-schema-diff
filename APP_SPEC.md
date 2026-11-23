@@ -2,9 +2,9 @@
 
 ## Status
 
-- Current version: `v1.0.5`
+- Current version: `v1.1.0`
 - Release status: formal release
-- Supported in v1.0.5: Apache Parquet, CSV, TSV, JSONL, NDJSON
+- Supported in v1.1.0: Apache Parquet, CSV, TSV, JSONL, NDJSON
 - Processing: fully local in the browser
 - Release artifacts: `dist/index.html` and `dist/index.self-extract.html`
 
@@ -13,6 +13,16 @@
 Schema Diff compares a Before schema and an After schema without uploading either file. It is intentionally focused on schema changes rather than row-data differences.
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
+
+## v1.1.0 — Interactive results and manual rename confirmation
+
+- Counts of nonzero added, removed, modified, breaking, review, compatible and info fields can be selected to reuse the existing display filters; selecting a count clears the field search and scrolls to matching rows. Zero counts are not interactive. These filters never affect full exports.
+- The impact overview explains Review differently for inferred data and declared Parquet. Inferred types describe observations, not contractual compatibility; Parquet impact always depends on downstream consumers. Preserve the detailed per-field reasons.
+- Offer up to five conservative rename candidates with similar names and matching normalized types, kind, role, depth, and parent path. Never suggest pairing fields with conflicting explicit Field IDs. Limit the search to the first 200 removed and 200 added fields to avoid excessive work.
+- Do not alter the automatic comparison until the user explicitly confirms a pairing. A manually paired row is marked `confirmed` and receives a separate Review reason, never an automatic Field-ID match. Provide Undo; retain the unchanged automatic comparison in memory.
+- When a pair is confirmed, preserve the original automatic summary alongside marked confirmed pairs in JSON and label manually confirmed renames in Markdown. Full report exports continue to ignore display filters.
+- New comparison, changed file, swap, or inferred-data reload clears confirmed pairs. Language and filter changes retain them.
+- Verify desktop and smartphone, Japanese and English, source, readable/alias and self-extract standalone variants, field counts, exports, error states, and CSP network blocking.
 
 ## v1.0.5 file workflow refinements
 
