@@ -1,6 +1,8 @@
 name: Publish Schema Diff release
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -14,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: windows-latest
     timeout-minutes: 20
     outputs:
@@ -62,7 +64,7 @@ jobs:
 
   publish:
     needs: build
-    if: github.ref == 'refs/heads/main' && needs.build.outputs.tag != ''
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.build.outputs.tag != ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
