@@ -192,7 +192,7 @@ async function main() {
               }
               if (width > 620) assert.equal(new Set(geometry.metrics.map(m => Math.round(m.top))).size,
                 1,label+': desktop counts fit on one line');
-              assert.ok(geometry.impact && geometry.impact.bottom - geometry.impact.top < 100,
+              assert.ok(geometry.impact && geometry.impact.bottom - geometry.impact.top < (width<=620?195:125),
                 label+': compatibility information occupies at most a compact row or two');
               assert.equal(geometry.impactItems.length,2,
                 label+': zero-valued compatible and info categories are hidden');
@@ -201,6 +201,20 @@ async function main() {
               assert.ok(geometry.impactItems.some(x => x.cls.includes('is-zero') && /0/.test(x.text)),
                 label+': zero breaking possibility remains as secondary context');
               assert.ok(geometry.pageWidth <= width,label+': no horizontal page overflow');
+              assert.match(await page.locator('.impact-overview-note').innerText(),
+                language==='ja'? /推定スキーマを含む比較/ : /inferred schema/i,
+                label+': review explanation distinguishes inferred schemas');
+              if (file === 'dist/index.html' && [1360, 360].includes(width)) {
+                const added=page.locator('[data-summary-filter="added"]');
+                assert.equal(await added.count(),1,label+': added count is a button');
+                await added.click();
+                assert.equal(await page.locator('#diffFilter').inputValue(),'added',label+': summary count applies the filter');
+                assert.match(await page.locator('#visibleCount').innerText(),/1\s*\/\s*3/,label+': one added field is displayed');
+                await page.locator('[data-summary-filter="review"]').click();
+                assert.equal(await page.locator('#diffFilter').inputValue(),'review',label+': impact count filters review rows');
+                await page.locator('[data-summary-filter="all"]').click();
+                assert.equal(await page.locator('#diffFilter').inputValue(),'all',label+': total count restores all fields');
+              }
               if (file === 'dist/index.html' && [1360, 360].includes(width)) {
                 await page.evaluate(() => window.scrollTo(0, 0));
                 await page.screenshot({path:path.join(results, `results-flat-${language}-${width}.png`), fullPage:true});
@@ -219,6 +233,40 @@ async function main() {
                 assert.match(await page.locator('.empty-state h3').innerText(), /スキーマに差分はありません/, label + ': no-diff state intact');
                 await page.evaluate(() => window.scrollTo(0, 0));
                 await page.screenshot({path:path.join(results, `results-same-${language}-${width}.png`), fullPage:true});
+              }
+              if (file === 'dist/index.html' && language === 'ja' && [1360, 360].includes(width)) {
+                await page.locator('#beforeInput').setInputFiles({
+                  name:'old.csv',mimeType:'text/csv',
+                  buffer:Buffer.from('customer_id,display_name\n1,A\n')
+                });
+                await page.locator('#afterInput').setInputFiles({
+                  name:'new.csv',mimeType:'text/csv',
+                  buffer:Buffer.from('customerId,display_name\n1,A\n')
+                });
+                await page.waitForFunction(() => !document.querySelector('#compareButton').disabled);
+                await page.locator(width<=820 ? '#mobileCompareButton' : '#compareButton').click();
+                await page.locator('#reportToolbar').waitFor();
+                const candidate=page.locator('[data-rename-from="customer_id"][data-rename-to="customerId"]');
+                assert.equal(await candidate.count(),1,label+': rename is proposed but not automatic');
+                assert.equal(await page.locator('.result-overview-item').count(),4,label+': unchanged summary is retained');
+                assert.match(await page.locator('#resultsSub').innerText(),/2フィールドに変更/,label+': automatic diff remains intact');
+                await candidate.click();
+                assert.equal(await page.locator('#diffFilter').inputValue(),'renamed',label+': confirmed rename is displayed');
+                assert.match(await page.locator('#resultsSub').innerText(),/1フィールドに変更/,label+': confirmed pair is one modified field');
+                assert.equal(await page.locator('[data-rename-undo="customer_id"]').count(),1,label+': explicit undo is provided');
+                const exportEvent=page.waitForEvent('download');
+                await page.locator('#saveJsonButton').click();
+                const output=await exportEvent, dest=path.join(results,`manual-rename-${width}.json`);
+                await output.saveAs(dest);
+                const report=JSON.parse(fs.readFileSync(dest,'utf8'));
+                assert.equal(report.summary.renamed,1,label+': report includes manual pairing');
+                assert.equal(report.automaticSummary.changed,2,label+': original automatic result preserved');
+                assert.equal(report.manuallyConfirmedRenames[0].beforePath,'customer_id',label+': confirmed pair is labeled');
+                await page.locator('#languageButton').click();
+                assert.equal(await page.locator('[data-rename-undo="customer_id"]').count(),1,label+': confirmation survives language change');
+                await page.locator('#languageButton').click();
+                await page.locator('[data-rename-undo="customer_id"]').click();
+                assert.match(await page.locator('#resultsSub').innerText(),/2フィールドに変更/,label+': Undo restores automatic result');
               }
             }
             assert.deepEqual(errors, [], label + ': console errors');
