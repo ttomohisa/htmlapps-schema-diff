@@ -169,8 +169,10 @@ async function main() {
               }
               assert.ok(geometry.impact.cards[0].top - geometry.summary.cards.at(-1).bottom >= 15, label + ': two metric groups separated');
               assert.ok(geometry.pageWidth <= width, label + ': no page-level horizontal overflow');
-              if (file === 'dist/index.html' && [1360, 360].includes(width))
+              if (file === 'dist/index.html' && [1360, 360].includes(width)) {
+                await page.evaluate(() => window.scrollTo(0, 0));
                 await page.screenshot({path:path.join(results, `results-flat-${language}-${width}.png`), fullPage:true});
+              }
               // The user's report includes the no-difference state: keep it readable as well.
               if (file === 'dist/index.html' && language === 'ja' && [1360, 360].includes(width)) {
                 await page.locator('#afterInput').setInputFiles({
@@ -183,6 +185,7 @@ async function main() {
                 assert.equal(await page.locator('.summary-card').count(), 4, label + ': unchanged summary metrics retained');
                 assert.match(await page.locator('#resultsSub').innerText(), /2フィールドを比較しました/, label + ': unique comparison summary');
                 assert.match(await page.locator('.empty-state h3').innerText(), /スキーマに差分はありません/, label + ': no-diff state intact');
+                await page.evaluate(() => window.scrollTo(0, 0));
                 await page.screenshot({path:path.join(results, `results-same-${language}-${width}.png`), fullPage:true});
               }
             }

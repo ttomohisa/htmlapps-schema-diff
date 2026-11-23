@@ -18,7 +18,7 @@ Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL 
 
 - Keep only a short bilingual explanation in the visible introductory area and a visually hidden application heading; the header shows the supported format summary without a local-processing suffix.
 - Hide the local-processing badge for viewports at or below 820 px. Remove repeated workspace instructions, point the empty dropzone arrow into its tray and make the inference controls a borderless native disclosure.
-- Preserve the four schema summary metrics and four compatibility impact metrics. Display them in spacious four-column grids on desktop, switching to two columns at 620 px, with sufficient internal padding, readable captions and no page-wide horizontal scrolling.
+- Preserve the four schema summary metrics and four compatibility impact metrics. Present them as flat, full-width rows separated only by fine dividers (no nested rounded cards or tinted card backgrounds); use four columns on desktop and two at 620 px and below. Maintain adequate whitespace and readable captions without horizontal scrolling. In a no-difference result, the subtitle shows the number of fields compared instead of repeating the empty-state message.
 - A push to main, including merging this PR, rebuilds and verifies both standalone variants before the versioned tag and GitHub Release are created. A release with an existing tag is never duplicated, and the publishing step runs with narrowly scoped write permissions.
 - Preserve both languages, the complete Help guidance, accessibility, local-only processing, the CSP and all existing schema comparison capabilities.
 
