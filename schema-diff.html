@@ -1138,7 +1138,7 @@
 
     function dropMarkup(){return `<svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 16v4h16v-4"/></svg><div class="drop-title">${escapeHtml(t('dropTitle'))}</div><div class="drop-hint">${escapeHtml(t('dropHint'))}</div><button class="button choose-button" type="button" data-choose="1">${escapeHtml(t('chooseFile'))}</button>`}
     // Suggested names are deliberately conservative. They never alter the automatic diff.
-    function renameBaseName(field){return String(field?.name||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]/gu,'')}
+    function renameBaseName(field){return String(field?.name||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,'')}
     function renameParentPath(field){const path=String(field?.path||''),part=fieldNamePath(field?.name||'');return path.endsWith(part)?path.slice(0,path.length-part.length):path.slice(0,path.lastIndexOf('.')+1)}
     function renameDistance(a,b){const prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diagonal=prev[0];prev[0]=i;for(let j=1;j<=b.length;j++){const old=prev[j];prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));diagonal=old}}return prev[b.length]}
     function renameSimilarity(before,after){
