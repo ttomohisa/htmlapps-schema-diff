@@ -37,6 +37,7 @@ function runtime() {
   vm.runInContext(section('    const translations=', '    const $=') +
     section('    function detectLanguage()', '    function showToast(') +
     section('    const ParquetTypes=', '    function dropMarkup()') +
+    section('    function renameBaseName(', '    function escapeHtml(') +
     html.split('\n').find(line => line.includes('function escapeHtml(')) +
     section('    function comparable()', '    let lastDiff=') +
     section('    function fieldPathText(', '    function fieldPathCell(') +
