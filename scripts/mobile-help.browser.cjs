@@ -123,33 +123,68 @@ async function main() {
               const geometry = await page.evaluate(() => {
                 const inspect = selector => {
                   const area = document.querySelector(selector);
-                  const box = area.getBoundingClientRect();
-                  const cards = [...area.children].map(node => node.getBoundingClientRect());
-                  const style = getComputedStyle(area);
-                  return { gap: Number.parseFloat(style.columnGap), rowGap: Number.parseFloat(style.rowGap),
-                    left:box.left, right:box.right,
-                    cards:cards.map(c => ({left:c.left,right:c.right,top:c.top,bottom:c.bottom})) };
+                  const rect = area.getBoundingClientRect();
+                  const cards = [...area.children].map(node => {
+                    const r = node.getBoundingClientRect(), css = getComputedStyle(node);
+                    const value = node.querySelector('.summary-value, .impact-value').getBoundingClientRect();
+                    return {
+                      left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+                      valueOffset: value.left - r.left,
+                      borderLeft: css.borderLeftWidth,
+                      borderTop: css.borderTopWidth,
+                      radius: css.borderRadius,
+                      background: css.backgroundColor
+                    };
+                  });
+                  return { left: rect.left, right: rect.right, cards };
                 };
-                return { summary:inspect('.summary'), impact:inspect('.impact-summary'),
-                  pageWidth:document.documentElement.scrollWidth };
+                const results = document.querySelector('.results').getBoundingClientRect();
+                return {
+                  summary: inspect('.summary'), impact: inspect('.impact-summary'),
+                  resultsLeft: results.left, resultsRight: results.right,
+                  pageWidth: document.documentElement.scrollWidth
+                };
               });
               const cols = width <= 620 ? 2 : 4;
               for (const [kind, area] of Object.entries({ summary: geometry.summary, impact: geometry.impact })) {
-                assert.ok(area.gap >= 10 && area.rowGap >= 10, label + ': ' + kind + ' gaps');
-                assert.equal(new Set(area.cards.map(c => Math.round(c.top))).size, width <= 620 ? 2 : 1, label + ': ' + kind + ' rows');
-                for (let i = 0; i < area.cards.length; i++) {
-                  const card = area.cards[i];
-                  assert.ok(card.left >= area.left - 1 && card.right <= area.right + 1
-                    && card.left >= -1 && card.right <= width + 1, label + ': ' + kind + ' cards within viewport');
-                  assert.ok(card.bottom - card.top >= 76, label + ': ' + kind + ' card height');
-                  if (i > 0 && i % cols !== 0)
-                    assert.ok(card.left - area.cards[i - 1].right >= 9, label + ': ' + kind + ' card separation');
+                assert.equal(area.cards.length, 4, label + ': ' + kind + ' retains four metrics');
+                assert.equal(new Set(area.cards.map(c => Math.round(c.top))).size, width <= 620 ? 2 : 1, label + ': ' + kind + ' row count');
+                assert.ok(area.left >= geometry.resultsLeft + 10 && area.right <= geometry.resultsRight - 10, label + ': ' + kind + ' readable edge insets');
+                assert.ok(area.right >= geometry.resultsRight - 32, label + ': ' + kind + ' spans the result width');
+                for (let k = 0; k < area.cards.length; k++) {
+                  const card = area.cards[k], first = k % cols === 0;
+                  assert.ok(card.left >= area.left - 1 && card.right <= area.right + 1, label + ': ' + kind + ' within grid');
+                  assert.ok(card.left >= 0 && card.right <= width + 1, label + ': ' + kind + ' within screen');
+                  assert.ok(card.bottom - card.top >= 70, label + ': ' + kind + ' text has breathing room');
+                  assert.equal(card.background, 'rgba(0, 0, 0, 0)', label + ': ' + kind + ' no inner card background');
+                  assert.equal(card.borderTop, '0px', label + ': ' + kind + ' no individual card frame');
+                  assert.equal(card.radius, '0px', label + ': ' + kind + ' no nested rounded rectangles');
+                  assert.equal(card.borderLeft, first ? '0px' : '1px', label + ': ' + kind + ' separators only between columns');
+                  if (!first) assert.ok(card.valueOffset >= 17, label + ': ' + kind + ' inner padding at divider');
                 }
               }
-              assert.ok(geometry.impact.cards[0].top - geometry.summary.cards.at(-1).bottom >= 15, label + ': separated summary groups');
-              assert.ok(geometry.pageWidth <= width, label + ': summary creates no page overflow');
+              if (width <= 620) {
+                const gap = geometry.summary.cards[2].top - geometry.summary.cards[0].bottom;
+                assert.ok(gap >= 20, label + ': mobile metric row separation');
+              }
+              assert.ok(geometry.impact.cards[0].top - geometry.summary.cards.at(-1).bottom >= 15, label + ': two metric groups separated');
+              assert.ok(geometry.pageWidth <= width, label + ': no page-level horizontal overflow');
               if (file === 'dist/index.html' && [1360, 360].includes(width))
-                await page.screenshot({path:path.join(results, `results-${language}-${width}.png`), fullPage:true});
+                await page.screenshot({path:path.join(results, `results-flat-${language}-${width}.png`), fullPage:true});
+              // The user's report includes the no-difference state: keep it readable as well.
+              if (file === 'dist/index.html' && language === 'ja' && [1360, 360].includes(width)) {
+                await page.locator('#afterInput').setInputFiles({
+                  name:'identical.csv',mimeType:'text/csv',
+                  buffer:Buffer.from('id,name\\n1,Kitty\\n')
+                });
+                await page.waitForFunction(() => !document.querySelector('#compareButton').disabled);
+                await page.locator(width <= 820 ? '#mobileCompareButton' : '#compareButton').click();
+                assert.equal(await page.locator('.impact-card').count(), 0, label + ': no irrelevant impact metrics on identical schemas');
+                assert.equal(await page.locator('.summary-card').count(), 4, label + ': unchanged summary metrics retained');
+                assert.match(await page.locator('#resultsSub').innerText(), /2フィールドを比較しました/, label + ': unique comparison summary');
+                assert.match(await page.locator('.empty-state h3').innerText(), /スキーマに差分はありません/, label + ': no-diff state intact');
+                await page.screenshot({path:path.join(results, `results-same-${language}-${width}.png`), fullPage:true});
+              }
             }
             assert.deepEqual(errors, [], label + ': console errors');
             assert.deepEqual(requests, [], label + ': external runtime requests');
