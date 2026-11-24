@@ -235,6 +235,8 @@ $node = Get-Command node -ErrorAction Stop
 if ($LASTEXITCODE -ne 0) { throw "Schema Diff source modal scroll-lock checks failed." }
 & $node.Source --test (Join-Path $Root "scripts/test-schema-diff.cjs")
 if ($LASTEXITCODE -ne 0) { throw "Schema Diff runtime regression tests failed." }
+& $node.Source (Join-Path $Root "scripts/test-documentation.cjs")
+if ($LASTEXITCODE -ne 0) { throw "Schema Diff bilingual documentation check failed." }
 
 $buildArguments = @{}
 if ($ForceDownload) { $buildArguments.ForceDownload = $true }
