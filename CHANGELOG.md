@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## v1.1.0 - 2026-11-24
+
+- Enable one-click filtering from comparison counts and compatibility counts, with keyboard access and automatic scrolling to the matching rows.
+- Explain why changes need review in inferred schemas versus declared Parquet schemas.
+- Suggest conservative column rename pairs based on similar names and types. Pairings need explicit confirmation, can be undone, and are labeled as manual in exports without losing the automatic comparison.
+- Bound fuzzy matching to two edits and names of at most 128 characters to avoid delays for wide schemas; long normalized-exact matches still work.
+- Correct local-HTML setup instructions and clarify that Parquet previews may read more than ten rows' worth of compressed data.
+- Keep literal dotted column names separate from nested field paths in Parquet data previews.
+- Add an accessible, bilingual report filename dialog, with editable sanitized names and automatic Markdown / JSON extensions.
+
+- Fix CSV / TSV header inference when the last row has no trailing newline.
+- Keep special-character field names separate from nested paths across CSV, JSONL and Parquet.
+- Correct signed INT64 bounds, JSON numeric precision classification and Gregorian date validation.
+- Read Parquet preview rows across row groups; preserve unsigned numbers and null/empty collection distinctions.
+- Avoid inherited JavaScript property values in JSONL preview cells.
+- Add parser, comparison and preview regression tests.
+- Condense the results into one inline row of four comparison counts and a short compatibility line that prioritizes nonzero categories (with potentially breaking changes at zero shown as secondary context); keep full statistics in exports. Remove repeated no-difference copy. Shorten the introductory and header copy, hide the mobile local-processing badge, point file-drop arrows downward, and remove redundant workspace and inference-frame chrome.
+- Publish the validated standalone and self-extract variants as versioned GitHub Release assets with an idempotent tag when the PR is merged into main.
+- Remove redundant OLD/NEW file labels, hide the introduction and local-processing badge after a file is selected, and present loaded-file preview and replacement actions as accessible underlined text links instead of outlined buttons.
+
 - Hide the informational page footer at the existing smartphone breakpoint and move the unchanged build information to the end of Help. Preserve native disclosure and dialog dismissal.
 
 ## v1.0.4 - 2026-10-11

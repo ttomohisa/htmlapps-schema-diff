@@ -2,9 +2,9 @@
 
 ## Status
 
-- Current version: `v1.0.4`
-- Release status: formal release
-- Supported in v1.0.4: Apache Parquet, CSV, TSV, JSONL, NDJSON
+- Current version: `v1.1.0`
+- Release pipeline: validated pushes to `main` publish a versioned GitHub Release; PR builds never publish
+- Supported in v1.1.0: Apache Parquet, CSV, TSV, JSONL, NDJSON
 - Processing: fully local in the browser
 - Release artifacts: `dist/index.html` and `dist/index.self-extract.html`
 
@@ -13,6 +13,50 @@
 Schema Diff compares a Before schema and an After schema without uploading either file. It is intentionally focused on schema changes rather than row-data differences.
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
+
+## v1.1.0 — Editable report filenames (release audit)
+
+- Save Markdown / Save JSON opens a compact native dialog with a suggested filename, an editable stem, and a fixed visible extension. Cancel/Esc/backdrop closes without creating a file.
+- Sanitize path separators, reserved control characters and device names; use a safe default when the entered name is empty. Respect the app's full-export behavior and use the user's chosen name for the downloaded file.
+- Preserve the edited stem for subsequent exports while both input files remain the same; reset the suggested name when sources change.
+- Retain keyboard focus and accessible labels, support Japanese and English and narrow mobile viewports, and test actual saved filenames and file contents.
+
+## v1.1.0 — Interactive results and manual rename confirmation
+
+- Counts of nonzero added, removed, modified, breaking, review, compatible and info fields can be selected to reuse the existing display filters; selecting a count clears the field search and scrolls to matching rows. Zero counts are not interactive. These filters never affect full exports.
+- The impact overview explains Review differently for inferred data and declared Parquet. Inferred types describe observations, not contractual compatibility; Parquet impact always depends on downstream consumers. Preserve the detailed per-field reasons.
+- Offer up to five conservative rename candidates with similar names and matching normalized types, kind, role, depth, and parent path. Never suggest pairing fields with conflicting explicit Field IDs. Limit the search to the first 200 removed and 200 added fields. Names that match after normalization can be arbitrarily long; fuzzy similarity is limited to 128 characters and two edits to avoid blocking the UI.
+- Do not alter the automatic comparison until the user explicitly confirms a pairing. A manually paired row is marked `confirmed` and receives a separate Review reason, never an automatic Field-ID match. Provide Undo; retain the unchanged automatic comparison in memory.
+- When a pair is confirmed, preserve the original automatic summary alongside marked confirmed pairs in JSON and label manually confirmed renames in Markdown. Full report exports continue to ignore display filters.
+- New comparison, changed file, swap, or inferred-data reload clears confirmed pairs. Language and filter changes retain them.
+- Verify desktop and smartphone, Japanese and English, source, readable/alias and self-extract standalone variants, field counts, exports, error states, and CSP network blocking.
+
+Historical milestone sections below are retained for reference; the v1.1.0 contract above takes precedence where behavior has changed, including manually confirmed renames.
+
+## v1.0.5 file workflow refinements
+
+- Use Before and After as the only file-side labels; omit the redundant OLD and NEW tags in both languages.
+- Show the introductory explanation and local-processing badge only before a file is selected. Selecting either Before or After (including drag-and-drop or replacement) hides the whole introduction, on PC and mobile, including while a file is loading or after a read error. The app's screen-reader heading stays in the document outside the conditional introduction.
+- Render the loaded file's "Preview first 10 rows" and "Replace file" controls as underlined text links in the brand green. Keep them as actual accessible buttons with keyboard/focus support, responsive wrapping and at least 44px touch height on narrow phones. The initial empty-file chooser remains a conventional button.
+- Preserve all preview/replace behavior, Before/After swap, the inference disclosure, both languages, schema comparison and report export. Include browser regression checks for initial/selected state, link styling, preview and replacement workflows, and mobile horizontal overflow.
+
+## v1.0.5 UI and release integration
+
+- Keep only a short bilingual explanation in the visible introductory area and a visually hidden application heading; the header shows the supported format summary without a local-processing suffix.
+- Hide the local-processing badge for viewports at or below 820 px. Remove repeated workspace instructions, point the empty dropzone arrow into its tray and make the inference controls a borderless native disclosure.
+- Keep the four schema summary counts in a compact inline row (wrapping on narrow phones), with one subtle divider before the impact row. Show nonzero compatibility categories first and a secondary zero for potentially breaking changes when absent; omit other zero-value impact categories from the display, but retain all four counts in report exports and filtering logic. Avoid nested cards, oversized metric values and page-level horizontal scroll. In a no-difference result, show the number compared without a duplicate impact row.
+- A push to main, including merging this PR, rebuilds and verifies both standalone variants before the versioned tag and GitHub Release are created. A release with an existing tag is never duplicated, and the publishing step runs with narrowly scoped write permissions.
+- Preserve both languages, the complete Help guidance, accessibility, local-only processing, the CSP and all existing schema comparison capabilities.
+
+## v1.0.5 scope — Data correctness fixes
+
+- Include the last CSV / TSV record in delimiter and header detection when the initial sample reaches the actual end of file.
+- Encode literal names containing path syntax unambiguously in Parquet, CSV / TSV and JSONL / NDJSON field paths, without changing the CSV preview's original header labels.
+- Reject CSV integers outside the signed INT64 range and invalid calendar dates, and infer unsafe JSON integers conservatively as FLOAT64.
+- Assemble Parquet previews from consecutive row groups without padding missing rows, preserve unsigned integer logical and converted types, and distinguish null collections, empty collections and null elements. Quote literal field names in preview column paths to avoid collisions with nested fields.
+- Do not render inherited JavaScript properties for absent JSONL preview keys.
+- Keep declared/inferred distinctions, original metadata-only schema reading, file swap, search, filters, full Markdown / JSON output, bilingual UI, CSP network blocking and both standalone formats.
+- Test these cases in the native runtime and across readable, alias and self-extract outputs.
 
 ## v1.0.4 scope — Help background scroll lock
 

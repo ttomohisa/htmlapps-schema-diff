@@ -1,0 +1,106 @@
+name: Publish Schema Diff release
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-diff-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Identify SemVer version
+        id: version
+        shell: pwsh
+        run: |
+          $config = Get-Content -Raw -Encoding UTF8 app.config.json | ConvertFrom-Json
+          $version = [string]$config.version
+          if ($config.slug -ne 'schema-diff' -or $version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw 'Schema Diff release requires a valid numeric SemVer version.'
+          }
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+      - name: Validate PowerShell syntax and encoding
+        shell: powershell
+        run: .\scripts\check-powershell-syntax.ps1
+      - name: Build and verify standalone HTML
+        shell: pwsh
+        run: ./scripts/check-repository.ps1
+      - name: Prepare verified release files and notes
+        shell: pwsh
+        run: |
+          $version = [string](Get-Content -Raw -Encoding UTF8 app.config.json | ConvertFrom-Json).version
+          $changelog = Get-Content -Raw -Encoding UTF8 CHANGELOG.md
+          $escaped = [regex]::Escape($version)
+          $section = [regex]::Match($changelog, "(?ms)^## v$escaped[^\r\n]*\r?\n(.*?)(?=^## |\z)")
+          if (-not $section.Success -or -not $section.Groups[1].Value.Trim()) {
+            throw "Release notes are missing for v$version."
+          }
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item dist/index.html "release/schema-diff-v$version.html"
+          Copy-Item dist/index.self-extract.html "release/schema-diff-v$version.self-extract.html"
+          $section.Groups[1].Value.Trim() | Set-Content -Encoding utf8 release/notes.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: schema-diff-release-files
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.build.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: schema-diff-release-files
+          path: release
+      - name: Tag merged commit and publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="$RELEASE_TAG"
+          version="${tag#v}"
+          assets=("release/schema-diff-v${version}.html" "release/schema-diff-v${version}.self-extract.html")
+          for asset in "${assets[@]}" release/notes.md; do test -s "$asset"; done
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "GitHub Release $tag is already published; no new tag or release is needed."
+            exit 0
+          fi
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            if [[ "$(git rev-parse "refs/tags/$tag^{commit}")" != "$GITHUB_SHA" ]]; then
+              echo "::error::Tag $tag already points to a different commit."
+              exit 1
+            fi
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null
+          fi
+
+          gh release create "$tag" "${assets[@]}" --verify-tag --title "Schema Diff $tag" --notes-file release/notes.md

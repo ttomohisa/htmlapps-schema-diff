@@ -27,7 +27,9 @@ function runtime() {
     document: { body: { classList: { toggle() {} } } },
     $: selector => {
       if (!elements.has(selector)) elements.set(selector, {
-        disabled: false, addEventListener(type, callback) { this[type] = callback; }
+        disabled: false, addEventListener(type, callback) { this[type] = callback; },
+        showModal() { this.open = true; }, close() { this.open = false; },
+        focus() {}, select() {}
       });
       return elements.get(selector);
     },
@@ -37,6 +39,7 @@ function runtime() {
   vm.runInContext(section('    const translations=', '    const $=') +
     section('    function detectLanguage()', '    function showToast(') +
     section('    const ParquetTypes=', '    function dropMarkup()') +
+    section('    function renameBaseName(', '    function escapeHtml(') +
     html.split('\n').find(line => line.includes('function escapeHtml(')) +
     section('    function comparable()', '    let lastDiff=') +
     section('    function fieldPathText(', '    function fieldPathCell(') +
@@ -346,7 +349,16 @@ for (const language of ['ja', 'en']) test(`${language}: Renamed UI renders count
   search('no-match'); assert.match(c.elements.get('#resultRows').innerHTML, /filter-empty/);
   assert.equal(c.elements.get('#visibleCount').textContent, c.t('visibleCount', { visible: '0', total: '4' }));
   await c.elements.get('#copyResultButton').click();
-  c.elements.get('#saveMarkdownButton').click(); c.elements.get('#saveJsonButton').click();
+  c.elements.get('#saveMarkdownButton').click();
+  assert.equal(c.elements.get('#filenameDialog').open, true, 'editable Markdown name dialog opens');
+  c.elements.get('#filenameInput').value = 'checked-name';
+  c.elements.get('#filenameForm').submit({ preventDefault() {} });
+  c.elements.get('#saveJsonButton').click();
+  assert.equal(c.elements.get('#filenameDialog').open, true, 'editable JSON name dialog opens');
+  c.elements.get('#filenameInput').value = 'checked-name.json';
+  c.elements.get('#filenameForm').submit({ preventDefault() {} });
+  assert.equal(downloads[0].filename, 'checked-name.md');
+  assert.equal(downloads[1].filename, 'checked-name.json');
   assert.equal(c.copied, c.buildMarkdownReport(diff)); assert.equal(downloads[0].text, c.copied);
   for (const field of ['old_name', 'new_name', 'added', 'removed']) assert.ok(c.copied.includes(field), field);
   const json = JSON.parse(downloads[1].text);
@@ -397,4 +409,201 @@ for (const format of ['csv', 'tsv', 'jsonl', 'ndjson']) test(`${format}: integer
     }
     assert.equal(c.buildJsonReport(diff).schemaVersion, 1);
   }
+});
+
+test('CSV / TSV include the final line without a trailing newline in header detection', async () => {
+  for (const [format,delimiter] of [['csv',','],['tsv','\t'],['csv',';']]) {
+    const c=runtime();c.inferenceSettings.headerMode='auto';
+    const raw='id'+delimiter+'name\n1'+delimiter+'Kitty';
+    const before=await c.readSchema(csv(raw,'before.'+format));
+    const after=await c.readSchema(csv(raw+'\n','after.'+format));
+    assert.deepEqual(plain(before.fields.map(f=>f.path)),['id','name']);
+    assert.equal(before.fields[0].type,'INT32');
+    assert.equal(before.metadata.sampled_rows,1);
+    assert.equal(c.diffSchemas(before,after).summary.changed,0);
+    const preview=await c.readFilePreview({file:csv(raw,'data.'+format),schema:before});
+    assert.equal(preview.rows[0].name,'Kitty');
+  }
+});
+
+test('JSONL literal dotted/bracketed names do not collide with nested paths', async () => {
+  const c=runtime(),before=await c.readSchema(csv('{"a":{"b":1},"a.b":"text","arr[]":true}\n','before.jsonl')),
+    after=await c.readSchema(csv('{"a":{"b":"text"},"a.b":1,"arr[]":false}\n','after.jsonl'));
+  assert.ok(before.fields.some(f=>f.path==='a.b'));
+  assert.ok(before.fields.some(f=>f.path==='["a.b"]'));
+  assert.ok(before.fields.some(f=>f.path==='["arr[]"]'));
+  const diff=c.diffSchemas(before,after);
+  assert.equal(diff.summary.modified,2);
+  assert.deepEqual(plain(diff.rows.filter(r=>r.changes.length).map(r=>r.path).sort()),['["a.b"]','a.b']);
+  c.inferenceSettings.headerMode='yes';
+  const flat=await c.readSchema(csv('a.b\n1\n','flat.csv'));
+  const literal=await c.readSchema(csv('{"a.b":1}\n','literal.jsonl'));
+  assert.equal(c.diffSchemas(flat,literal).summary.changed,0);
+  const preview=await c.readFilePreview({file:csv('a.b\n1\n','flat.csv'),schema:flat});
+  assert.deepEqual(plain(preview.columns),['a.b']);
+});
+
+test('inferred schemas respect 64-bit integer, number precision and valid dates', () => {
+  const c=runtime();
+  assert.equal(c.inferredValueType('9223372036854775807'),'INT64');
+  assert.equal(c.inferredValueType('9223372036854775808'),'STRING');
+  assert.equal(c.inferredValueType('-9223372036854775809'),'STRING');
+  assert.equal(c.inferredValueType('2026-02-30'),'STRING');
+  assert.equal(c.inferredValueType('2024-02-29'),'DATE');
+  assert.equal(c.inferredValueType('2026-02-30T12:30:00Z'),'STRING');
+  assert.equal(c.jsonPrimitiveType(1e100),'FLOAT64');
+  assert.equal(c.jsonPrimitiveType(2147483648),'INT64');
+  assert.equal(c.jsonPrimitiveType(Number.MAX_SAFE_INTEGER+1),'FLOAT64');
+});
+
+test('Parquet unsigned logical and converted integers render correctly', () => {
+  const c=runtime();
+  assert.equal(c.parquetConvertValue(-1,{type:'INT32',logical_type:{type:'INTEGER',bitWidth:32,isSigned:false}}),4294967295);
+  assert.equal(c.parquetConvertValue(-1,{type:'INT32',converted_type:'UINT_32'}),4294967295);
+  assert.equal(c.parquetConvertValue(-1n,{type:'INT64',converted_type:'UINT_64'}),18446744073709551615n);
+  assert.equal(c.parquetConvertValue(-1n,{type:'INT64',logical_type:{type:'INTEGER',bitWidth:64,isSigned:false}}),18446744073709551615n);
+});
+
+test('Parquet repeated definition levels preserve null, empty and null-element lists', () => {
+  const c=runtime();
+  const chain=[
+    {element:{repetition_type:'REQUIRED'}},
+    {element:{repetition_type:'OPTIONAL'}},
+    {element:{repetition_type:'REPEATED'}},
+    {element:{repetition_type:'OPTIONAL'}}
+  ];
+  const assemble=(values,defs,reps)=>c.parquetAssembleEntries(values,defs,reps,3,1,defs.length,chain);
+  assert.deepEqual(plain(assemble([], [0], [0])),[null]);
+  assert.deepEqual(plain(assemble([], [1], [0])),[[]]);
+  assert.deepEqual(plain(assemble([], [2], [0])),[[null]]);
+  assert.deepEqual(plain(assemble(['x'], [3], [0])),[['x']]);
+  assert.deepEqual(plain(assemble(['x'], [2,3], [0,1])),[[null,'x']]);
+});
+
+test('Parquet preview reads row groups in order until ten actual rows are decoded', async () => {
+  const c=runtime();
+  c.parquetLeafSchemaPaths=()=>[{path:['id']}];
+  c.parquetDecodeColumnChunk=async(_buffer,column,_leaf,limit)=>
+    (Number(column.meta_data.data_page_offset)===0?[1,2,3]:[4,5,6,7,8,9,10,11,12]).slice(0,limit);
+  const file=new File([new Uint8Array(3)],'multi.parquet');
+  const group=(start,count)=>({num_rows:count,columns:[{meta_data:{path_in_schema:['id'],data_page_offset:start,total_compressed_size:1,num_values:count}}]});
+  const schema={metadata:{num_rows:12,row_groups:[group(0,3),group(1,9)]},fields:[{path:'id',depth:0}]};
+  const result=await c.parquetPreviewRows(file,schema,10);
+  assert.deepEqual(plain(result.rows.map(row=>row.id)),[1,2,3,4,5,6,7,8,9,10]);
+  assert.equal(result.tracker.requests,2);
+});
+
+test('JSONL preview ignores inherited object properties in missing cells', () => {
+  const c=runtime();
+  vm.runInContext(section('    function previewMarkup(', '    async function togglePreview('),c);
+  const entry={schema:{format:'jsonl'},preview:{open:true,data:{
+    columns:['constructor','toString'],rows:[JSON.parse('{"constructor":"yes","toString":"ok"}'),{}]
+  }}};
+  const markup=c.previewMarkup('before',entry);
+  assert.match(markup,/>yes</);
+  assert.doesNotMatch(markup,/function Object|function toString/);
+});
+
+
+test('similar column names are suggestions until the user confirms a pairing', async () => {
+  const c=runtime();
+  const before=await c.readSchema(csv('customer_id,status_code\n1,2\n','before.csv'));
+  const after=await c.readSchema(csv('customerId,status_code\n1,2\n','after.csv'));
+  const automatic=c.diffSchemas(before,after);
+  assert.equal(automatic.summary.added,1);
+  assert.equal(automatic.summary.removed,1);
+  assert.equal(automatic.summary.renamed,0);
+  assert.ok(c.suggestRenameCandidates(automatic).some(p=>p.beforePath==='customer_id'&&p.afterPath==='customerId'));
+  assert.equal(automatic.summary.changed,2,'suggestions do not change the automatic comparison');
+  const adjusted=c.applyConfirmedRenames(automatic,new Map([['customer_id','customerId']]));
+  assert.equal(adjusted.summary.added,0);
+  assert.equal(adjusted.summary.removed,0);
+  assert.equal(adjusted.summary.modified,1);
+  assert.equal(adjusted.summary.renamed,1);
+  assert.equal(adjusted.summary.changed,1);
+  assert.equal(adjusted.summary.impacts.review,1);
+  assert.equal(adjusted.summary.fields,automatic.summary.fields-1);
+  assert.equal(automatic.summary.changed,2,'original comparison is unchanged');
+  assert.equal(adjusted.automaticSummary,automatic.summary);
+  const pair=adjusted.rows.find(row=>row.userConfirmed);
+  assert.equal(pair.match,'confirmed');
+  assert.deepEqual(plain(pair.changes),['renamed']);
+  assert.equal(pair.impact.reason,'reasonConfirmedInferred');
+  assert.equal(c.applyConfirmedRenames(automatic,new Map()),automatic,'Undo restores the original result');
+  c.state.before={file:csv('customer_id,status_code\n1,2\n','before.csv'),schema:before};
+  c.state.after={file:csv('customerId,status_code\n1,2\n','after.csv'),schema:after};
+  const exportJson=c.buildJsonReport(adjusted);
+  assert.equal(exportJson.automaticSummary.changed,2);
+  assert.deepEqual(plain(exportJson.manuallyConfirmedRenames),[{beforePath:'customer_id',afterPath:'customerId'}]);
+  assert.equal(exportJson.fields.filter(row=>row.userConfirmed).length,1);
+  assert.match(c.buildMarkdownReport(adjusted),/customer_id → customerId/);
+});
+test('candidate matching rejects unrelated names, type changes and conflicting Field IDs', async () => {
+  const c=runtime();
+  const typed=c.diffSchemas(
+    await c.readSchema(csv('customer_id,extra_thing\n1,2\n','before.csv')),
+    await c.readSchema(csv('customerId,other_name\nhello,2\n','after.csv'))
+  );
+  assert.equal(c.suggestRenameCandidates(typed).length,0);
+  const same=c.diffSchemas(
+    await c.readSchema(csv('customer_id\n1\n','before.csv')),
+    await c.readSchema(csv('customerId\n1\n','after.csv'))
+  );
+  same.rows.find(row=>row.before).before.fieldId=5;
+  same.rows.find(row=>row.after).after.fieldId=6;
+  assert.equal(c.suggestRenameCandidates(same).length,0);
+});
+test('one-to-one rename pairing cannot consume the same new field twice', async () => {
+  const c=runtime();
+  const before=await c.readSchema(csv('customer_id,account_number,keep\n1,1,3\n','before.csv'));
+  const after=await c.readSchema(csv('customerId,accountNumber,keep\n1,1,3\n','after.csv'));
+  const original=c.diffSchemas(before,after);
+  const modified=c.applyConfirmedRenames(original,new Map([
+    ['customer_id','customerId'],
+    ['account_number','customerId']
+  ]));
+  assert.equal(modified.confirmedPairs.length,1);
+  assert.equal(modified.rows.find(row=>row.beforePath==='keep').changes.length,0);
+  assert.equal(modified.summary.changed,original.summary.changed-1);
+});
+
+
+test('bounded rename matching remains useful without guessing long fuzzy names', () => {
+  const c=runtime();
+  const field=name=>({name,path:name,depth:0,kind:'VALUE',role:'field',normalizedType:'INT32',fieldId:null});
+  const similarity=(a,b)=>c.renameSimilarity(field(a),field(b));
+  assert.equal(similarity('customer_id','customerId'),1);
+  assert.ok(similarity('customername','customernane')>.88);
+  assert.equal(similarity('customername','customerzzzz'),0);
+  const huge='customer_'+('a'.repeat(200));
+  assert.equal(similarity(huge+'_old',huge+'_new'),0);
+  assert.equal(similarity(huge+'_name',huge+'Name'),1);
+});
+
+test('Parquet preview distinguishes a literal dotted name from a nested field path', async () => {
+  const c=runtime();
+  assert.equal(c.parquetPreviewColumnName(['a','b']),'a.b');
+  assert.equal(c.parquetPreviewColumnName(['a.b']),'["a.b"]');
+  assert.equal(c.parquetPreviewColumnName(['a','b.c']),'a["b.c"]');
+  c.parquetLeafSchemaPaths=()=>[{path:['a','b']},{path:['a.b']}];
+  c.parquetDecodeColumnChunk=async(_buffer,column)=>
+    [column.meta_data.data_page_offset===0?111:222];
+  const file=new File([new Uint8Array(2)],'dotted.parquet');
+  const column=(path,offset)=>({meta_data:{path_in_schema:path,data_page_offset:offset,total_compressed_size:1,num_values:1}});
+  const schema={metadata:{num_rows:1,row_groups:[{num_rows:1,columns:[
+    column(['a','b'],0),column(['a.b'],1)
+  ]}]},fields:[{path:'a',depth:0},{path:'["a.b"]',depth:0}]};
+  const result=await c.parquetPreviewRows(file,schema,10);
+  assert.deepEqual(plain(result.columns),['a.b','["a.b"]']);
+  assert.equal(result.rows[0]['a.b'],111);
+  assert.equal(result.rows[0]['["a.b"]'],222);
+});
+
+test('download names remove unsafe characters, extensions and reserved Windows device names', () => {
+  const c=runtime();
+  for(const [value,expected] of [
+    ['custom.json','custom'],['nested/a\\b','nested-a-b'],['CON','CON-file'],
+    ['..',''],['a:b*?c','a-b--c'],['複雑な名前.md','複雑な名前']
+  ]) assert.equal(c.cleanExportBase(value),expected);
+  assert.equal(c.cleanExportBase('x'.repeat(250)).length,120);
 });

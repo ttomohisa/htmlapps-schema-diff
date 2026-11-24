@@ -7,7 +7,7 @@
 5. Reload the local HTML.
 6. Exercise every core input, editing, preview, worker, and export flow.
 7. Confirm there is no failed external resource request and no console error.
-8. Change the suggested output filename, export, and confirm both the filename and file contents are correct.
+8. Save a report, edit its suggested filename in the save dialog, and verify the downloaded filename, extension and file contents. Repeat with an empty or unsafe filename to confirm sanitization and fallback.
 9. If the app can replace its primary input while processing, change the input mid-process and confirm no stale result from the old input appears.
 10. Confirm output files still open correctly.
 
