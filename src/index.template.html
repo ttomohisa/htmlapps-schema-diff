@@ -1140,7 +1140,28 @@
     // Suggested names are deliberately conservative. They never alter the automatic diff.
     function renameBaseName(field){return String(field?.name||'').normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu,'')}
     function renameParentPath(field){const path=String(field?.path||''),part=fieldNamePath(field?.name||'');return path.endsWith(part)?path.slice(0,path.length-part.length):path.slice(0,path.lastIndexOf('.')+1)}
-    function renameDistance(a,b){const prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diagonal=prev[0];prev[0]=i;for(let j=1;j<=b.length;j++){const old=prev[j];prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));diagonal=old}}return prev[b.length]}
+    // For candidate suggestions, at most two edits are useful. Limit the dynamic-programming
+    // band so long names or hundreds of changed fields cannot freeze the UI.
+    function renameDistance(a,b,limit=2){
+      const n=a.length,m=b.length;
+      if(Math.abs(n-m)>limit)return limit+1;
+      let previous=new Uint16Array(m+1).fill(limit+1),current=new Uint16Array(m+1).fill(limit+1);
+      for(let j=0;j<=Math.min(m,limit);j++)previous[j]=j;
+      for(let i=1;i<=n;i++){
+        current.fill(limit+1);
+        if(i<=limit)current[0]=i;
+        let best=limit+1;
+        for(let j=Math.max(1,i-limit);j<=Math.min(m,i+limit);j++){
+          const cost=a[i-1]===b[j-1]?0:1;
+          const distance=Math.min(previous[j]+1,current[j-1]+1,previous[j-1]+cost);
+          current[j]=distance;
+          if(distance<best)best=distance;
+        }
+        if(best>limit)return limit+1;
+        [previous,current]=[current,previous]
+      }
+      return previous[m]
+    }
     function renameSimilarity(before,after){
       if(!before||!after||before.depth!==after.depth||before.kind!==after.kind||before.role!==after.role)return 0;
       if(renameParentPath(before)!==renameParentPath(after))return 0;
@@ -1149,8 +1170,11 @@
       const a=renameBaseName(before),b=renameBaseName(after);
       if(!a||!b||a===b&&before.name===after.name)return 0;
       if(a===b&&a.length>=3)return 1;
-      if(Math.min(a.length,b.length)<8||a.slice(0,3)!==b.slice(0,3))return 0;
-      const score=1-renameDistance(a,b)/Math.max(a.length,b.length);
+      // Very long names are matched only by equal normalized spelling, not fuzzy edits.
+      if(Math.min(a.length,b.length)<8||Math.max(a.length,b.length)>128||a.slice(0,3)!==b.slice(0,3))return 0;
+      const edits=renameDistance(a,b,2);
+      if(edits>2)return 0;
+      const score=1-edits/Math.max(a.length,b.length);
       return score>=.88?score:0
     }
     function suggestRenameCandidates(original,pairs=new Map()){
