@@ -1080,7 +1080,7 @@
         const assembled=parquetAssembleEntries(values,defs,reps,maxDef,maxRep,numValues,leaf.chain);for(const value of assembled){rows.push(value);if(rows.length>=rowLimit)break}
       }return rows
     }
-    function parquetPreviewColumnName(path){if(path.length===1)return path[0];return path.join('.')}
+    function parquetPreviewColumnName(path){return path.reduce((parent,name)=>appendFieldPath(parent,name),'')}
     function parquetRowCountHint(metadata){
       const counts=[Number(metadata?.num_rows||0)];
       for(const group of metadata?.row_groups||[])counts.push(Number(group?.num_rows||0));
