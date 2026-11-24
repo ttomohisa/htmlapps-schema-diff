@@ -80,6 +80,21 @@ async function main() {
             assert.equal(await page.locator('main #buildVersion').count(), 0, label);
             assert.equal(await page.locator('footer').isVisible(), width > 820, label);
             await prepareApp(page, width, label);
+            if (file === 'dist/index.html' && language === 'ja' && width === 393 && height === 252) {
+              await page.locator('#mobileCompareButton').click();
+              await page.locator('#saveJsonButton').click();
+              const dialog=page.locator('#filenameDialog');
+              await dialog.waitFor({state:'visible'});
+              const rect=await dialog.boundingBox();
+              assert.ok(rect && rect.y>=-1 && rect.y+rect.height<=height+1,label+': short-screen filename dialog stays in viewport');
+              const state=await dialog.evaluate(el=>({
+                clientHeight:el.clientHeight,scrollHeight:el.scrollHeight,overflow:getComputedStyle(el).overflowY
+              }));
+              assert.ok(['auto','scroll'].includes(state.overflow),label+': filename dialog can scroll if needed');
+              assert.ok(state.clientHeight<=height-20,label+': filename dialog respects short viewport');
+              await page.locator('#filenameCancel').click();
+              assert.equal(await dialog.isVisible(),false,label+': Cancel closes without exporting');
+            }
             for (const side of ['before','after']) {
               const actions = page.locator('#' + side + 'Content .file-action-link');
               assert.equal(await actions.count(),2,label+': '+side+' has two text-link actions');
