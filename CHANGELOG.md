@@ -10,6 +10,7 @@
 - Bound fuzzy matching to two edits and names of at most 128 characters to avoid delays for wide schemas; long normalized-exact matches still work.
 - Correct local-HTML setup instructions and clarify that Parquet previews may read more than ten rows' worth of compressed data.
 - Keep literal dotted column names separate from nested field paths in Parquet data previews.
+- Add an accessible, bilingual report filename dialog, with editable sanitized names and automatic Markdown / JSON extensions.
 
 - Fix CSV / TSV header inference when the last row has no trailing newline.
 - Keep special-character field names separate from nested paths across CSV, JSONL and Parquet.

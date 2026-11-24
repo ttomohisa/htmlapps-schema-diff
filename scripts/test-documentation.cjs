@@ -29,5 +29,8 @@ assert.ok(en.includes('Modified fields')&&ja.includes('変更（追加・削除�
 assert.ok(en.includes('Likely compatible changes')&&ja.includes('互換性ありの可能性'),'Compatibility filter documented');
 assert.ok(en.includes('complete compressed column chunks')&&ja.includes('圧縮された列チャンク全体'),'Parquet memory limits documented');
 assert.ok(notes.includes('full compressed Parquet column chunks'),'Third-party notice accurate');
+assert.ok(en.includes('suggested filename')&&ja.includes('ファイル名を確認・編集'),'Editable export filename documented in both languages');
+assert.ok(spec.includes('Editable report filenames'),'Filename specification is tracked');
+assert.ok(source.includes('filenameDialogTitle')&&source.includes('cleanExportBase'),'Editable name dialog is implemented');
 assert.ok(source.includes('ten displayed rows')&&source.includes('10行より多くのデータ'),'Both Help languages mention read limits');
 console.log('[OK] Release docs and local links are consistent with v'+v);

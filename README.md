@@ -71,7 +71,7 @@ Schema Diff currently has no package entries in `dependencies.json`; the Parquet
 4. Select **Compare schemas**.
 5. Review summary counts and impact guidance; select a nonzero number to filter the fields. If names are suggested as renames, confirm only the pairs you know refer to the same field, and undo if necessary.
 6. Use field-path search or the display filter to investigate the result.
-7. Use **Copy result**, **Save Markdown**, or **Save JSON** when you need to keep or process the full comparison.
+7. Use **Copy result**, **Save Markdown**, or **Save JSON** when you need to keep or process the full comparison. When saving, check or edit the suggested filename and choose **Save**. The appropriate `.md` or `.json` extension is added automatically.
 
 Close Help with the Close button, Esc, or a click outside the dialog.
 

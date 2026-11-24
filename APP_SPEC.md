@@ -14,6 +14,13 @@ Schema Diff compares a Before schema and an After schema without uploading eithe
 
 Parquet uses a schema explicitly declared in file metadata. CSV / TSV and JSONL / NDJSON use inferred schemas derived from observed rows or objects. The UI and compatibility logic must keep declared and inferred sources distinct.
 
+## v1.1.0 — Editable report filenames (release audit)
+
+- Save Markdown / Save JSON opens a compact native dialog with a suggested filename, an editable stem, and a fixed visible extension. Cancel/Esc/backdrop closes without creating a file.
+- Sanitize path separators, reserved control characters and device names; use a safe default when the entered name is empty. Respect the app's full-export behavior and use the user's chosen name for the downloaded file.
+- Preserve the edited stem for subsequent exports while both input files remain the same; reset the suggested name when sources change.
+- Retain keyboard focus and accessible labels, support Japanese and English and narrow mobile viewports, and test actual saved filenames and file contents.
+
 ## v1.1.0 — Interactive results and manual rename confirmation
 
 - Counts of nonzero added, removed, modified, breaking, review, compatible and info fields can be selected to reuse the existing display filters; selecting a count clears the field search and scrolls to matching rows. Zero counts are not interactive. These filters never affect full exports.
