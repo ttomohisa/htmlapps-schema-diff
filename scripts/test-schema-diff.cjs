@@ -555,3 +555,35 @@ test('one-to-one rename pairing cannot consume the same new field twice', async 
   assert.equal(modified.rows.find(row=>row.beforePath==='keep').changes.length,0);
   assert.equal(modified.summary.changed,original.summary.changed-1);
 });
+
+
+test('bounded rename matching remains useful without guessing long fuzzy names', () => {
+  const c=runtime();
+  const field=name=>({name,path:name,depth:0,kind:'VALUE',role:'field',normalizedType:'INT32',fieldId:null});
+  const similarity=(a,b)=>c.renameSimilarity(field(a),field(b));
+  assert.equal(similarity('customer_id','customerId'),1);
+  assert.ok(similarity('customername','customernane')>.88);
+  assert.equal(similarity('customername','customerzzzz'),0);
+  const huge='customer_'+('a'.repeat(200));
+  assert.equal(similarity(huge+'_old',huge+'_new'),0);
+  assert.equal(similarity(huge+'_name',huge+'Name'),1);
+});
+
+test('Parquet preview distinguishes a literal dotted name from a nested field path', async () => {
+  const c=runtime();
+  assert.equal(c.parquetPreviewColumnName(['a','b']),'a.b');
+  assert.equal(c.parquetPreviewColumnName(['a.b']),'["a.b"]');
+  assert.equal(c.parquetPreviewColumnName(['a','b.c']),'a["b.c"]');
+  c.parquetLeafSchemaPaths=()=>[{path:['a','b']},{path:['a.b']}];
+  c.parquetDecodeColumnChunk=async(_buffer,column)=>
+    [column.meta_data.data_page_offset===0?111:222];
+  const file=new File([new Uint8Array(2)],'dotted.parquet');
+  const column=(path,offset)=>({meta_data:{path_in_schema:path,data_page_offset:offset,total_compressed_size:1,num_values:1}});
+  const schema={metadata:{num_rows:1,row_groups:[{num_rows:1,columns:[
+    column(['a','b'],0),column(['a.b'],1)
+  ]}]},fields:[{path:'a',depth:0},{path:'["a.b"]',depth:0}]};
+  const result=await c.parquetPreviewRows(file,schema,10);
+  assert.deepEqual(plain(result.columns),['a.b','["a.b"]']);
+  assert.equal(result.rows[0]['a.b'],111);
+  assert.equal(result.rows[0]['["a.b"]'],222);
+});
