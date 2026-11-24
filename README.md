@@ -20,7 +20,7 @@ The repository includes a GitHub Pages deployment workflow. The link above becom
 
 GitHub Pages delivers the initial HTML. After it loads, selected files are read and compared locally in the browser; the app does not upload those files.
 
-[![Schema Diff screenshot](assets/screenshot-en.png)](https://ttomohisa.github.io/htmlapps-schema-diff/)
+The [live app](https://ttomohisa.github.io/htmlapps-schema-diff/) reflects the currently deployed version. The archived screenshots in `assets/` predate the v1.1.0 interface changes and are not release-validation evidence.
 
 ## Features
 
@@ -47,12 +47,12 @@ After the repository has been published and Pages enabled, open the [GitHub Page
 
 ### Use the downloaded single HTML
 
-1. Download or clone this repository.
-2. Open `dist/index.html` in a current browser.
+1. Download `schema-diff-vX.Y.Z.html` from the [GitHub Releases](https://github.com/ttomohisa/htmlapps-schema-diff/releases) page, or save the repository's tracked `schema-diff.html`.
+2. Open the saved HTML in a current browser.
 3. Add a **Before** file and an **After** file.
 4. Select **Compare schemas**.
 
-`dist/index.html` is self-contained and does not require a local web server. `dist/index.self-extract.html` is a smaller gzip self-extracting variant for browsers that support `DecompressionStream`.
+`schema-diff.html` is the tracked standalone file. The `dist/index.html` and `dist/index.self-extract.html` files are created **by the build** and are not present in a fresh source checkout. The gzip self-extracting variant requires browser support for `DecompressionStream`. No local web server is needed.
 
 ### Build it yourself (advanced)
 
@@ -81,14 +81,17 @@ The result view can show:
 
 - All fields
 - Changed fields only
+- Modified fields (excluding additions and removals)
 - Added fields
 - Removed fields
-- Renamed fields
+- Renamed fields (automatic or manually confirmed)
 - Type changes
 - Potentially breaking changes
 - Review items
+- Likely compatible changes
+- Informational items
 
-The Renamed filter shows fields matched by a unique Field ID on both Parquet sides, including renames with other changes. Search can match either the old or new path. Similar names or ambiguous IDs do not create rename matches.
+The Renamed filter includes fields matched automatically by a unique Parquet Field ID and name pairs explicitly confirmed by the user. Similar names alone only generate suggestions; they are never automatic matches. Confirmed pairs are recorded as manual and can be undone. Search can match both the old and new paths.
 
 Search and filters affect only the screen. Copy, Markdown export, and JSON export always use the complete comparison result.
 
@@ -218,7 +221,7 @@ Schema Diff is designed for **fully local processing**.
 - Row data is read only when a first-10-row preview is explicitly opened.
 - CSV / TSV / JSONL / NDJSON are read incrementally according to the configured sample and preview request.
 
-The GitHub Pages version still needs the initial HTML request to load the app. For use with the network completely disconnected, open `dist/index.html` locally.
+The GitHub Pages version still needs the initial HTML request to load the app. For use with the network completely disconnected, open the downloaded release HTML or the tracked `schema-diff.html` locally. If you built from source, `dist/index.html` is also available.
 
 Literal names containing path notation use quoted field paths to stay distinct from nested fields (for example, `["a.b"]` versus `a.b`). A Parquet preview continues into the next row group if the first one has fewer than ten rows.
 
@@ -227,13 +230,14 @@ Literal names containing path notation use quoted field paths to stay distinct f
 - Compatibility labels are guidance and cannot guarantee behavior in a particular downstream system.
 - CSV / TSV / JSONL / NDJSON schemas are inferred from observed data rather than explicit constraints.
 - Values that exist only outside the selected inference sample are not reflected in the inferred schema.
-- Similar field names alone are not used to infer renames.
-- Duplicate Field IDs are not used for rename matching.
+- Similar field names only generate candidates, not automatic renames. Explicit user confirmation is required to pair names manually; automatic Parquet matching still requires a unique Field ID.
+- Duplicate Field IDs are not used for automatic rename matching.
 - Order-only schema changes are not classified separately.
 - CSV / TSV / JSONL / NDJSON primarily target UTF-8 input.
 - Some Parquet compression codecs may be unsupported by the optional row preview even though schema comparison still works.
 - Damaged, encrypted, or otherwise unsupported files may not be readable.
 - Large inference samples and wide previews can use substantial device memory depending on the file and browser.
+- A Parquet preview can read complete compressed column chunks even when displaying only ten rows; large row groups or many columns may increase memory consumption.
 
 ## Third-party code
 

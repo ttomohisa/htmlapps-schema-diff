@@ -20,7 +20,7 @@ Parquet / CSV / TSV / JSONL / NDJSONの2ファイルを、選択したファイ�
 
 GitHub Pages版では最初のHTML配信だけが発生し、その後に選択したファイルの読み込み・推定・比較・プレビュー・レポート生成はブラウザー内で処理します。選択したファイルをアプリからサーバーへアップロードしません。
 
-[![Schema Diffの画面](assets/screenshot.png)](https://ttomohisa.github.io/htmlapps-schema-diff/)
+最新の公開画面は [GitHub Pages版](https://ttomohisa.github.io/htmlapps-schema-diff/) で確認できます。`assets/` のスクリーンショットはv1.1.0のUI変更より前に撮影したもので、今回のリリース検証用ではありません。
 
 ## 主な機能
 
@@ -47,14 +47,14 @@ GitHub Pages版では最初のHTML配信だけが発生し、その後に選択�
 
 ### ダウンロードして使う
 
-1. このリポジトリをダウンロードまたはクローンします。
-2. `dist/index.html` を最新ブラウザーで開きます。
+1. [GitHub Releases](https://github.com/ttomohisa/htmlapps-schema-diff/releases) から `schema-diff-vX.Y.Z.html` をダウンロードします。リポジトリ直下の `schema-diff.html` を保存しても使えます。
+2. 保存したHTMLをブラウザーで開きます。
 3. **Before** と **After** にファイルを追加します。
 4. **スキーマを比較** を押します。
 
-`dist/index.html` は自己完結した単一HTMLで、ローカルWebサーバーは不要です。`dist/index.self-extract.html` は `DecompressionStream` 対応ブラウザー向けのgzip自己展開版です。
+`schema-diff.html` はリポジトリに含まれる単一HTMLです。`dist/index.html` と `dist/index.self-extract.html` は**ビルド後に生成されるファイル**で、クローン直後にはありません。gzip自己展開版は `DecompressionStream` 対応ブラウザー向けです。ローカルWebサーバーは不要です。
 
-### 自分でビルドする（advance）
+### 自分でビルドする（開発者向け）
 
 1. Windows 10/11でリポジトリをダウンロードまたはクローンします。
 2. 必要に応じてPowerShell 7を用意します。
@@ -81,14 +81,17 @@ Schema Diffの `dependencies.json` には現在パッケージ依存を登録し
 
 - すべて
 - 変更のみ
+- 変更（追加・削除以外）
 - 追加
 - 削除
-- 名前変更
+- 名前変更（自動判定・手動確認）
 - 型変更
 - 破壊的変更の可能性
 - 要確認
+- 互換性ありの可能性
+- 情報
 
-「名前変更」は両側で一意なField IDが一致するParquetフィールドに絞り込み、型なども同時に変わったフィールドを含みます。変更前・変更後のパスで検索できます。似た名前や重複したIDだけでは名前変更と判定しません。
+「名前変更」には、一意なParquet Field IDによる自動判定と、ユーザーが明示的に確認した列名変更を表示します。名前が似ているだけでは自動確定しません。確認した組み合わせは取り消せ、レポートでも手動確認として区別されます。変更前・変更後のパスで検索できます。
 
 検索とフィルターは**画面表示だけ**に適用されます。結果コピー、Markdown保存、JSON保存には常に比較結果全体を含めます。
 
@@ -216,7 +219,7 @@ Schema Diffは**完全ローカル処理**を前提にしています。
 - 行データは先頭10行プレビューを明示的に開いた場合だけ読みます。
 - CSV / TSV / JSONL / NDJSONは設定したサンプル数とプレビュー要求に応じてincrementalに読みます。
 
-GitHub Pages版ではアプリを開くための最初のHTML通信は発生します。完全にネットワークを切って使う場合は `dist/index.html` をローカルで開いてください。
+GitHub Pages版ではアプリを開くための最初のHTML通信は発生します。完全にネットワークを切って使う場合は、ダウンロードしたReleaseのHTMLか `schema-diff.html` を開いてください。ビルド後なら `dist/index.html` も利用できます。
 
 列名にドットや角括弧が含まれる場合、Field pathでは引用符付きの角括弧を使い、入れ子のフィールドと区別します（例：`["a.b"]` と `a.b`）。Parquetの先頭10行プレビューでは、最初のrow groupに10行未満しかない場合、後続のrow groupも読み込みます。
 
@@ -225,13 +228,14 @@ GitHub Pages版ではアプリを開くための最初のHTML通信は発生し�
 - Compatibilityラベルは一般的な目安であり、特定の利用先での動作を保証しません。
 - CSV / TSV / JSONL / NDJSONのSchemaは明示制約ではなく観測データからの推定です。
 - 推定サンプル範囲外にだけ存在する値は推定Schemaへ反映されません。
-- 類似名称だけを根拠にrename推定しません。
-- 重複Field IDはrename対応付けに使いません。
+- 名前が似た列は候補として示すだけで、自動では名前変更と判定しません。ユーザーが確認した場合のみ手動の対応付けとして扱います。
+- 重複Field IDは自動でのrename対応付けに使いません。
 - 列順だけのSchema変更は個別分類しません。
 - CSV / TSV / JSONL / NDJSONはUTF-8を主対象とします。
 - 一部のParquet圧縮形式は任意の行プレビューで未対応でも、Schema比較は行える場合があります。
 - 壊れたファイル、暗号化ファイル、その他未対応のファイルは読み込めない場合があります。
 - 大きな推定サンプルや列数の多いプレビューでは、ファイルやブラウザーによって端末メモリを多く使用します。
+- Parquetのプレビューでは、表示が10行でも圧縮された列チャンク全体を読み込む場合があります。row groupが大きい場合や列が多い場合は、メモリ使用量が増えます。
 
 ## 第三者コード
 
