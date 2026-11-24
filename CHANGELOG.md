@@ -7,7 +7,8 @@
 - Enable one-click filtering from comparison counts and compatibility counts, with keyboard access and automatic scrolling to the matching rows.
 - Explain why changes need review in inferred schemas versus declared Parquet schemas.
 - Suggest conservative column rename pairs based on similar names and types. Pairings need explicit confirmation, can be undone, and are labeled as manual in exports without losing the automatic comparison.
-
+- Bound fuzzy matching to two edits and names of at most 128 characters to avoid delays for wide schemas; long normalized-exact matches still work.
+- Correct local-HTML setup instructions and clarify that Parquet previews may read more than ten rows' worth of compressed data.
 
 - Fix CSV / TSV header inference when the last row has no trailing newline.
 - Keep special-character field names separate from nested paths across CSV, JSONL and Parquet.

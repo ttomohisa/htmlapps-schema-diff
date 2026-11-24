@@ -1,7 +1,7 @@
 # Third-Party Notices
 
 Schema Diff includes a compact subset adapted from **hyparquet 1.30.0**.
-Schema extraction uses the Parquet footer/metadata path. Since v0.8.1, Schema Diff also includes a limited, on-demand row-preview path that reads only the data needed for the first 10 rows after the user opens a preview. No hyparquet package or network resource is loaded at runtime.
+Schema extraction uses the Parquet footer/metadata path. Since v0.8.1, Schema Diff also includes a limited, on-demand row-preview path, activated only when the user opens a preview. The app decodes up to the first 10 rows for display, but reads full compressed Parquet column chunks containing those rows, which may include substantially more source data. No hyparquet package or network resource is loaded at runtime.
 
 - Project: https://github.com/hyparam/hyparquet
 - Version: 1.30.0
