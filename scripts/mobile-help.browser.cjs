@@ -25,7 +25,12 @@ async function smoke(page, results, file) {
   if (await page.locator('#mobileCompareButton').isVisible()) await page.locator('#mobileCompareButton').click();
   await page.locator('#reportToolbar').waitFor();
   assert.equal(await page.locator('#mobileCompareBar').isVisible(),false,'finished comparison action hidden');
-  const downloadPromise=page.waitForEvent('download');await page.locator('#saveJsonButton').click();const download=await downloadPromise;
+  await page.locator('#saveJsonButton').click();
+  await page.locator('#filenameDialog').waitFor({state:'visible'});
+  assert.equal(await page.locator('#filenameExtension').innerText(),'.json');
+  const downloadPromise=page.waitForEvent('download');
+  await page.locator('#filenameSave').click();
+  const download=await downloadPromise;
   assert.equal(download.suggestedFilename(),'before-to-after-schema-diff.json');
   const target=path.join(results,file.includes('self-extract')?'synthetic-loader.json':'synthetic-readable.json');await download.saveAs(target);
   const report=JSON.parse(fs.readFileSync(target,'utf8'));assert.equal(report.summary.added,1);assert.ok(report.fields.some(field=>field.path==='score'));
@@ -254,9 +259,13 @@ async function main() {
                 assert.equal(await page.locator('#diffFilter').inputValue(),'renamed',label+': confirmed rename is displayed');
                 assert.match(await page.locator('#resultsSub').innerText(),/1フィールドに変更/,label+': confirmed pair is one modified field');
                 assert.equal(await page.locator('[data-rename-undo="customer_id"]').count(),1,label+': explicit undo is provided');
-                const exportEvent=page.waitForEvent('download');
                 await page.locator('#saveJsonButton').click();
+                await page.locator('#filenameDialog').waitFor({state:'visible'});
+                await page.locator('#filenameInput').fill('my-schema-review.json');
+                const exportEvent=page.waitForEvent('download');
+                await page.locator('#filenameSave').click();
                 const output=await exportEvent, dest=path.join(results,`manual-rename-${width}.json`);
+                assert.equal(output.suggestedFilename(),'my-schema-review.json',label+': user-edited download filename');
                 await output.saveAs(dest);
                 const report=JSON.parse(fs.readFileSync(dest,'utf8'));
                 assert.equal(report.summary.renamed,1,label+': report includes manual pairing');

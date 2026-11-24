@@ -27,7 +27,9 @@ function runtime() {
     document: { body: { classList: { toggle() {} } } },
     $: selector => {
       if (!elements.has(selector)) elements.set(selector, {
-        disabled: false, addEventListener(type, callback) { this[type] = callback; }
+        disabled: false, addEventListener(type, callback) { this[type] = callback; },
+        showModal() { this.open = true; }, close() { this.open = false; },
+        focus() {}, select() {}
       });
       return elements.get(selector);
     },
@@ -347,7 +349,16 @@ for (const language of ['ja', 'en']) test(`${language}: Renamed UI renders count
   search('no-match'); assert.match(c.elements.get('#resultRows').innerHTML, /filter-empty/);
   assert.equal(c.elements.get('#visibleCount').textContent, c.t('visibleCount', { visible: '0', total: '4' }));
   await c.elements.get('#copyResultButton').click();
-  c.elements.get('#saveMarkdownButton').click(); c.elements.get('#saveJsonButton').click();
+  c.elements.get('#saveMarkdownButton').click();
+  assert.equal(c.elements.get('#filenameDialog').open, true, 'editable Markdown name dialog opens');
+  c.elements.get('#filenameInput').value = 'checked-name';
+  c.elements.get('#filenameForm').submit({ preventDefault() {} });
+  c.elements.get('#saveJsonButton').click();
+  assert.equal(c.elements.get('#filenameDialog').open, true, 'editable JSON name dialog opens');
+  c.elements.get('#filenameInput').value = 'checked-name.json';
+  c.elements.get('#filenameForm').submit({ preventDefault() {} });
+  assert.equal(downloads[0].filename, 'checked-name.md');
+  assert.equal(downloads[1].filename, 'checked-name.json');
   assert.equal(c.copied, c.buildMarkdownReport(diff)); assert.equal(downloads[0].text, c.copied);
   for (const field of ['old_name', 'new_name', 'added', 'removed']) assert.ok(c.copied.includes(field), field);
   const json = JSON.parse(downloads[1].text);
@@ -586,4 +597,13 @@ test('Parquet preview distinguishes a literal dotted name from a nested field pa
   assert.deepEqual(plain(result.columns),['a.b','["a.b"]']);
   assert.equal(result.rows[0]['a.b'],111);
   assert.equal(result.rows[0]['["a.b"]'],222);
+});
+
+test('download names remove unsafe characters, extensions and reserved Windows device names', () => {
+  const c=runtime();
+  for(const [value,expected] of [
+    ['custom.json','custom'],['nested/a\\b','nested-a-b'],['CON','CON-file'],
+    ['..',''],['a:b*?c','a-b--c'],['複雑な名前.md','複雑な名前']
+  ]) assert.equal(c.cleanExportBase(value),expected);
+  assert.equal(c.cleanExportBase('x'.repeat(250)).length,120);
 });
