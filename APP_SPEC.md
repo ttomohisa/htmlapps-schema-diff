@@ -46,7 +46,7 @@ Historical milestone sections below are retained for reference; the v1.1.0 contr
 - Include the last CSV / TSV record in delimiter and header detection when the initial sample reaches the actual end of file.
 - Encode literal names containing path syntax unambiguously in Parquet, CSV / TSV and JSONL / NDJSON field paths, without changing the CSV preview's original header labels.
 - Reject CSV integers outside the signed INT64 range and invalid calendar dates, and infer unsafe JSON integers conservatively as FLOAT64.
-- Assemble Parquet previews from consecutive row groups without padding missing rows, preserve unsigned integer logical and converted types, and distinguish null collections, empty collections and null elements.
+- Assemble Parquet previews from consecutive row groups without padding missing rows, preserve unsigned integer logical and converted types, and distinguish null collections, empty collections and null elements. Quote literal field names in preview column paths to avoid collisions with nested fields.
 - Do not render inherited JavaScript properties for absent JSONL preview keys.
 - Keep declared/inferred distinctions, original metadata-only schema reading, file swap, search, filters, full Markdown / JSON output, bilingual UI, CSP network blocking and both standalone formats.
 - Test these cases in the native runtime and across readable, alias and self-extract outputs.
